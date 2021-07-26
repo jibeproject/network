@@ -1,0 +1,80 @@
+#SET UP
+rm(list = ls())
+
+if (!require("sf")) install.packages("sf")
+if (!require("sp")) install.packages("sp")
+if (!require("rgdal")) install.packages("rgdal")
+if (!require("dplyr")) install.packages("dplyr")
+if (!require("igraph")) install.packages("igraph")
+if (!require("tidyverse")) install.packages("tidyverse")
+if (!require("stplanr")) install.packages("stplanr")
+if (!require("tidygraph")) install.packages("tidygraph")
+if (!require("geojsonio")) install.packages("geojsonio")
+if (!require("sfnetworks")) install.packages("sfnetworks")
+
+
+#################
+# PART 1: load the osm network file, clean and convert it to sfNetwork for routing
+#################
+#read in the network
+osm <- readOGR(file.path("01_DataInput/Network/GMOSMCYIPT_edges.geojson"))
+
+#check if the network is connected
+shp2graph::nt.connect(osm)
+#convert to sf and sfnetwork
+osm_sf <- st_as_sf(osm)
+osm_sfnetwork <- as_sfnetwork(osm_sf)
+#add pseudo nodes and then remove non-intersection nodes. Turn back to sf for visual check in QGIS
+osm_pseudo <- convert(osm_sfnetwork, to_spatial_subdivision)
+osm_smoothed <- convert(osm_pseudo, to_spatial_smooth)
+
+osm_sf_cleaned <- osm_smoothed %>% activate("edges") %>%  st_as_sf()
+osm_sf_nodes_cleaned <- osm_smoothed %>% activate("nodes") %>%  st_as_sf()
+geojsonio::geojson_write(osm_sf_cleaned, file  = file.path("02_DataOutput/network/GMOSMCYIPT_edges.geojson"))
+geojsonio::geojson_write(osm_sf_nodes_cleaned, file  = file.path("02_DataOutput/network/GMOSMCYIPT_nodes.geojson"))
+
+#################
+# PART 2: find destinations in buffer radius
+#################
+#read in the origin and destinations
+origin <- readOGR(file.path("01_DataInput/origin/OriginTest_GM.shp"))
+destinations <- readOGR(file.path("01_DataInput/destinations/DestTest_GM.shp"))
+
+maxkm <- 2  #2km crow-fly cut-off
+edistdf<- data.frame(pcd_o=character(), pcd_d=character(), edist=numeric())
+for (i in 1:nrow(origin)){
+  for (j in 1:nrow(destinations)){
+    edist <- (((origin@coords[i,1]/1000 - destinations@coords[j,1]/1000)^2) + ((origin@coords[i,2]/1000 - destinations@coords[j,2]/1000)^2))^0.5
+    if (edist < maxkm) {
+      pcd_o <- origin@data[i,2]
+      pcd_d <- destinations@data[j,2]
+      df <- data.frame(pcd_o = pcd_o, pcd_d = pcd_d, edist = edist)
+      edistdf <- rbind(edistdf, df)
+    } else {
+    }
+  }
+  print(paste0(i," at ",Sys.time()))
+}
+edistdf <- edistdf[edistdf$edist!=0,]
+edistdf <- edistdf[order(edistdf$edist),]
+
+destinations_buf <- destinations[destinations$pcd %in% edistdf$pcd_d,]
+origin_sf <- st_as_sf(origin)
+destinations_sf <- st_as_sf(destinations_buf)
+
+#################
+# PART 3: routing using igraph shortest
+#################
+#convert osm_sf_cleaned to sfNetwork
+osm_sf_cleaned_sln <- SpatialLinesNetwork(osm_sf_cleaned)
+
+origin_coor <- st_coordinates(origin_sf) %>% as.matrix()
+destinations_coor <- st_coordinates(destinations_sf)%>% as.matrix()
+
+#create od matrix
+start_nodes <- find_network_nodes(osm_sf_cleaned_sln, origin_coor)
+start_nodes <- sapply(nodes[1], function(x) rep(x, 2740)) %>% as.vector()
+end_nodes <- find_network_nodes(osm_sf_cleaned_sln, destinations_coor)
+startend <- cbind(start_nodes, end_nodes)
+
+routes <- sum_network_routes(osm_sf_cleaned_sln, startend[,1], startend[,2])
