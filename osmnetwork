@@ -9,29 +9,63 @@ if (!require("igraph")) install.packages("igraph")
 if (!require("tidyverse")) install.packages("tidyverse")
 if (!require("stplanr")) install.packages("stplanr")
 if (!require("tidygraph")) install.packages("tidygraph")
-if (!require("geojsonio")) install.packages("geojsonio")
+#if (!require("geojsonio")) install.packages("geojsonio")
 if (!require("sfnetworks")) install.packages("sfnetworks")
 
 
 #################
-# PART 1: load the osm network file, clean and convert it to sfNetwork for routing
+# PART 1: load osm network to clean
 #################
-#read in the network
-osm <- readOGR(file.path("01_DataInput/Network/GMOSMCYIPT_edges.geojson"))
+#read in network (must be one type-- i.e. 'LINESTRING' or 'POINT' combo fails in sfnetworks)
+osm <- st_read(file.path("01_DataInput/Network/GMOSMCYIPT_edges.geojson")) %>% st_cast("LINESTRING")
 
-#check if the network is connected
-shp2graph::nt.connect(osm)
-#convert to sf and sfnetwork
-osm_sf <- st_as_sf(osm)
-osm_sfnetwork <- as_sfnetwork(osm_sf)
-#add pseudo nodes and then remove non-intersection nodes. Turn back to sf for visual check in QGIS
+#convert to sfnetwork
+osm_sfnetwork <- as_sfnetwork(osm)
+#add pseudo nodes for missing intersections
 osm_pseudo <- convert(osm_sfnetwork, to_spatial_subdivision)
-osm_smoothed <- convert(osm_pseudo, to_spatial_smooth)
 
-osm_sf_cleaned <- osm_smoothed %>% activate("edges") %>%  st_as_sf()
-osm_sf_nodes_cleaned <- osm_smoothed %>% activate("nodes") %>%  st_as_sf()
-geojsonio::geojson_write(osm_sf_cleaned, file  = file.path("02_DataOutput/network/GMOSMCYIPT_edges.geojson"))
-geojsonio::geojson_write(osm_sf_nodes_cleaned, file  = file.path("02_DataOutput/network/GMOSMCYIPT_nodes.geojson"))
+#optional--remove non-intersection nodes with to_spatial_smooth-- currently a bug? re-enumerating the .tidygraph_edge_index over to_spatial_subdivision
+#osm_smoothed <- convert(osm_pseudo, to_spatial_smooth) NOT UDED:throwing back re-indexing for .tidygraph_edge_index attribute
+
+#################
+# PART 1.1: find biggest connected component
+#################
+#find the biggest connected component-- after https://github.com/ropensci/stplanr/issues/344
+osm_pseudo_sf <- osm_pseudo %>% activate("edges") %>% st_as_sf()
+touching_list <- st_touches(osm_pseudo_sf)
+graph_list <- graph.adjlist(touching_list)
+roads_group <- components(graph_list)
+roads_table <- table(roads_group$membership)
+roads_table_order <- roads_table[order(roads_table, decreasing = TRUE)]
+biggest_group <- names(roads_table_order[1])         #enumeration starts from 1 to n number of unconnected subgraphs; largest to smallest
+
+#keep ONLY connected component
+osm_connected_edges <- osm_pseudo_sf[roads_group$membership == biggest_group, ]
+osm_connected_nodes <- osm_pseudo %>% activate("nodes") %>% st_filter(osm_connected_edges, .pred = st_intersects) %>% st_as_sf()
+
+#################
+# PART 1.2: give each feature (nodes and edges) unique linked IDs
+#################
+edges <- osm_connected_edges %>% mutate(edgeID = c(1:n()))
+
+#extract nodes from edge data and give unique IDs
+nodes <- edges %>% st_coordinates() %>% as_tibble() %>% rename(edgeID = L1) %>% group_by(edgeID) %>% slice(c(1,n())) %>% ungroup() %>% mutate(start_end = rep(c("start", "end"), times = n()/2))
+nodes <- nodes %>% mutate(xy = paste(.$X, .$Y)) %>% mutate(nodeID = group_indices(., factor(xy, levels = unique(xy)))) %>% select(-xy)
+
+#ONLY for directed networks/otherwise duplicate edges and nodes to reverse
+source_nodes <- nodes %>% filter(start_end == "start") %>% pull(nodeID)
+target_nodes <- nodes %>% filter(start_end == "end") %>% pull(nodeID)
+edges <- edges %>% mutate(from = source_nodes, to = target_nodes) #could be skipped???????????
+
+#remove duplicate nodes removed if need be
+nodes <- nodes %>% distinct(nodeID, .keep_all = TRUE) %>% select(-c(edgeID, start_end)) %>% st_as_sf(coords = c('X', 'Y')) %>% st_set_crs(st_crs(edges))
+
+#export
+cityregion <- "gm" #make vector of all city-regions in to loop
+st_write(edges, file.path(paste0("02_DataOutput/network/", cityregion, "/edges")), "edges.shp", driver="ESRI Shapefile")  # create shapefile
+st_write(nodes, file.path(paste0("02_DataOutput/network/", cityregion, "/nodes")), "nodes.shp", driver="ESRI Shapefile")
+st_write(edges, file.path(paste0("02_DataOutput/network/", cityregion, "/network.gpkg")), "edges", driver="GPKG")  # create file
+st_write(nodes, file.path(paste0("02_DataOutput/network/", cityregion, "/network.gpkg")), "nodes", driver="GPKG", append = TRUE)
 
 #################
 # PART 2: find destinations in buffer radius
@@ -65,16 +99,16 @@ destinations_sf <- st_as_sf(destinations_buf)
 #################
 # PART 3: routing using igraph shortest
 #################
-#convert osm_sf_cleaned to sfNetwork
-osm_sf_cleaned_sln <- SpatialLinesNetwork(osm_sf_cleaned)
+#convert osm to sfNetwork
+edges_sln <- SpatialLinesNetwork(edges)
 
 origin_coor <- st_coordinates(origin_sf) %>% as.matrix()
 destinations_coor <- st_coordinates(destinations_sf)%>% as.matrix()
 
 #create od matrix
-start_nodes <- find_network_nodes(osm_sf_cleaned_sln, origin_coor)
+start_nodes <- find_network_nodes(edges_sln, origin_coor)
 start_nodes <- sapply(nodes[1], function(x) rep(x, 2740)) %>% as.vector()
-end_nodes <- find_network_nodes(osm_sf_cleaned_sln, destinations_coor)
+end_nodes <- find_network_nodes(edges_sln, destinations_coor)
 startend <- cbind(start_nodes, end_nodes)
 
-routes <- sum_network_routes(osm_sf_cleaned_sln, startend[,1], startend[,2])
+routes <- sum_network_routes(edges_sln, startend[,1], startend[,2])
