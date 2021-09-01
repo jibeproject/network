@@ -6,13 +6,13 @@ library(dplyr)
 
 
 #mastermap full UK data from Highway network
-mastermapUKgp <- st_read("../bigdata/MasterMaplinksUk/UKmastermapnodesHighway.gpkg")
+#mastermapUKgp <- st_read("../bigdata/MasterMaplinksUk/UKmastermapnodesHighwayWidth.gpkg") #read geopackage main file from the GLM
+#saveRDS(mastermapUKgp, "../bigdata/MasterMaplinksUk/mastermap_HW_UK.Rds") #covert to RDS for easy access
 
-
-mastermapUK <- readRDS("../bigdata/MasterMaplinksUk/UKmastermaplinks.Rds")
+mastermap_UK <- readRDS("../bigdata/MasterMaplinksUk/mastermap_HW_UK.Rds")
 
 #Get Boundaries
-bounds <- readRDS("../bigdata/boundaries/cityregions/cityregions_England.Rds")
+bounds <- readRDS("../bigdata/boundaries/cityregions/cityregions_England_10kmbuff.Rds")
 
 #subset the regions to do from the master file
 bounds <- bounds[bounds$cityregions %in% regions.todo,]
@@ -45,7 +45,7 @@ for (reg in 1:length(regions)) {
   region_shp <- st_transform(region_shp, 27700)
   plot(region_shp)
 
-  lines <- mastermapUK
+  lines <- mastermap_UK
 
   lines <- lines[region_shp,]
 
@@ -57,9 +57,8 @@ for (reg in 1:length(regions)) {
 
 rm (reg)
 rm (lines)
+rm (mastermap_UK)
 
-
-######### If we use ITN network we need to clean it a bit#########
 
 
 #a function to split text from number in a same column
