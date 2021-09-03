@@ -38,3 +38,36 @@ saveRDS(boundsbuff10km,"../bigdata/boundaries/cityregions/cityregions_England_10
 
 
 #st_write (boundsbuff10km,"cityregions_England10up.shp")
+
+
+bounds <- bounds[bounds$cityregions %in% regions.todo,]
+
+regions <- regions.todo
+
+#create folders for city regions
+for(i in seq(from = 1, to = nrow(bounds))){
+  region_nm <- as.character(bounds$cityregions[i])
+  exists <- file.exists(paste0("../bigdata/boundaries/cityregions/",region_nm,"/bounds.geojson"))
+  bounds$exists[i] <- exists
+  if(!exists){
+    dir.create(paste0("../bigdata/boundaries/cityregions/",region_nm))
+  }
+  rm(exists, region_nm)
+}
+rm(i)
+
+for (reg in 1:length(regions)) {
+
+  region_nm <- as.character(bounds$cityregions[reg])
+
+  print (region_nm)
+
+  region_shp <- bounds [reg,]
+  region_shp$region <- region_nm
+  region_shp <- region_shp[,"region"]
+  region_shp <- st_transform(region_shp, 27700)
+  plot(region_shp)
+
+  st_write(region_shp, dsn = paste0("../bigdata/boundaries/cityregions/",region_nm,"/bounds.geojson"))
+
+}
