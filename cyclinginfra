@@ -49,14 +49,9 @@ cycle <-  st_read(file.path("D:/JIBE/01_DataInput/Network/GM_cycle/2018/SHP-form
 cycle <- cycle[cycle$RouteStatu == 3, ]
 
 #sync categories
-cycle$RouteType <- gsub(9, 0, cycle$RouteType)
-cycle$RouteType <- gsub(2, 1, cycle$RouteType)
-cycle$RouteType <- gsub(3, 2, cycle$RouteType)
-cycle$RouteType <- gsub(4, 3, cycle$RouteType)
-cycle$RouteType <- gsub(11, 3, cycle$RouteType)
-cycle$RouteType <- gsub(5, 4, cycle$RouteType)
-cycle$RouteType <- gsub(6, 4, cycle$RouteType)
-cycle$RouteType <- gsub(7, 4, cycle$RouteType)
+cycle$RouteType <- cycle$RouteType %>% gsub(9, 0, .) %>% gsub(2, 1, .) %>% gsub(3, 2, .)
+cycle$RouteType <- gsub(4, 3, gsub(11, 3, cycle$RouteType))
+cycle$RouteType <- gsub(5, 4, gsub(6, 4, gsub(7, 4, cycle$RouteType)))
 
 #####################
 #PART 2: Create sample points on lines
