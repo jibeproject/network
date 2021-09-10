@@ -110,12 +110,14 @@ osmcycle_sf <- sf::read_sf(qgis_output(joininfo, "OUTPUT"))
 # If same OSM ID road segments have missing information we replace the null values with values from other road segments with same OSM ID
 osmcycle_sf <- osmcycle_sf %>%
   group_by(osm_id) %>% #group by OSM ID
-  dplyr::mutate (cycleinfa = median (RouteType_majority[!is.na(RouteType_majority)])) %>%
-  dplyr::mutate (cycleinfa = replace(cycleinfa, cycleinfa== 0.5, 0)) %>%
-  dplyr::mutate (cycleinfa = replace(cycleinfa, cycleinfa== 1.5, 1)) %>%
-  dplyr::mutate (cycleinfa = replace(cycleinfa, cycleinfa== 2.5, 2)) %>%
-  dplyr::mutate (cycleinfa = replace(cycleinfa, cycleinfa== 3.5, 3)) %>%
-  dplyr::mutate (cycleinfa = ifelse(roadtype == "motorway - Cycling Forbidden" | roadtype == "motorway_link - Cycling Forbidden", NA, cycleinfa))
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(roadtyp, "Cycleway") == TRUE, median(RouteType_majority[!is.na(RouteType_majority)]), NA)) %>%
+  dplyr::mutate(cycleosm = replace(cycleosm, cycleosm == 0.5, 0)) %>%
+  dplyr::mutate(cycleosm = replace(cycleosm, cycleosm == 1.5, 1)) %>%
+  dplyr::mutate(cycleosm = replace(cycleosm, cycleosm == 2.5, 2)) %>%
+  dplyr::mutate(cycleosm = replace(cycleosm, cycleosm == 3.5, 3)) %>%
+  dplyr::mutate(cycleosm = ifelse(roadtyp == "motorway - Cycling Forbidden" | roadtyp == "motorway_link - Cycling Forbidden", NA, cycleosm))
+
+osmcycle_sf <- osmcycle_sf %>% dplyr::mutate(cycleinfra = ifelse(!is.na(RouteType_majority), RouteType_majority, cycleosm))
 
 #save for next stages
 saveRDS(osmcycle_sf, paste0("../bigdata/network-addedinfo/","GreaterManchester","/network_added_edges.Rds"))
