@@ -97,7 +97,7 @@ joininfo <- qgis_run_algorithm(
   INPUT = osm,
   JOIN = snapbuffer,
   SUMMARIES = 10, # 10 is for majority, 7 for median
-  JOIN_FIELDS =  c('RouteType', 'RouteStatus')
+  JOIN_FIELDS =  c('RouteType', 'RouteSurfa')
 )
 
 #covert to sf object
@@ -125,5 +125,3 @@ st_write(osmcycle_sf, paste0("../bigdata/network-addedinfo/","GreaterManchester"
 
 #remove unnecessary files
 rm (osm, cycle, cycle_points, snap, snap_sf, snapbuffer, joininfo, osmcycle_sf)
-
-
