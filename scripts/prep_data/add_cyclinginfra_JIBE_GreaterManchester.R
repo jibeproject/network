@@ -48,7 +48,7 @@ osm <- readRDS(paste0("../bigdata/network-clean/","GreaterManchester","/network_
 cycle <-  st_read(file.path("../network/01_DataInput/Network/GM_cycle/2018/SHP-format/2018/Cycle_Routes_polyline.shp"))
 
 #keep only existing infra -3; from 3306 total of 75 removed - 1 (idea/concept) - 2 (potential route) --3231 final
-cycle <- cycle[cycle$RouteStatu == 3, ]
+#cycle <- cycle[cycle$RouteStatu == 3, ] these tags are outdated (most routes exist)
 
 #sync categories
 cycle$RouteType <- cycle$RouteType %>% gsub(9, 0, .) %>% gsub(2, 1, .) %>% gsub(3, 2, .)
