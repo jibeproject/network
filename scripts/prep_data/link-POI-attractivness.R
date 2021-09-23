@@ -73,7 +73,7 @@ clustered_pois <- join %>% group_by(osm_id, pointx_class) %>% tally() %>% ungrou
 clustered_pois$geom <- NULL
 clustered_pois <- clustered_pois  %>% mutate(prop = n/sum(n))
 
-count <- as.data.frame.matrix(xtabs(n ~ osm_id + pointx_class, clustered_pois_var2_copy), responseName = "osm_id") #convert to matrix
+count <- as.data.frame.matrix(xtabs(n ~ osm_id + pointx_class, clustered_pois), responseName = "osm_id") #convert to matrix
 
 #get Shannon's Index
 shannon <- vegan::diversity(count, index = "shannon") %>% as.data.frame()
