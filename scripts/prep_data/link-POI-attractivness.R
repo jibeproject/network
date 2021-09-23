@@ -41,8 +41,8 @@ poi_coors <- poi_edgeattract %>% st_coordinates()
 kNNdistplot(poi_coors, k = 20)
 kNNdistplot(poi_coors, k = 5)
 
-#initial test on 'esp' 150 and 'kNN' 15 based on OS High Streets criteria; out of experimental try tested also for  20/200; 30/300; 20/100; 10/100; 5/50; 5/150
-#further visual tests for 'esp' based on var kNN distances 'minPts/eps'-- 5/500; 50/500; 10/1100; 15/1000; 20/1000; 5/750; 30/1900;
+#initial test on 'eps' 150 and 'kNN' 15 based on OS High Streets criteria; out of experimental try tested also for  20/200; 30/300; 20/100; 10/100; 5/50; 5/150
+#further visual tests for 'eps' based on var kNN distances 'minPts/eps'-- 5/500; 50/500; 10/1100; 15/1000; 20/1000; 5/750; 30/1900;
 
 #get POI clusters
 poi_edgeattract$geog_cluster <- dbscan(poi_coors, eps = 150, minPts = 5) %>% pluck('cluster') %>% as.character()
