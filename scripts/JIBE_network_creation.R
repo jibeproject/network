@@ -4,6 +4,8 @@
 #This script assumes that you have certain pre-existing dataset in the Bigdata repo
 #in the right places that have been pre-formatted for jibeproject
 
+rm(list=ls())
+
 ###########################################
 #Settings
 
@@ -21,8 +23,6 @@ all.regions <- F #Ignore the regions to do file and do all regions
 
 ##########################################
 
-#rm(list=ls())
-
 library(sf)
 library(osmdata)
 library(stringr)
@@ -33,12 +33,15 @@ library(igraph)
 library(sfnetworks)
 library(tidygraph)
 library(tidyverse)
+library(missForest)
 library(tmap)
-tmap_mode("view")
+library(raster)
+library(qgisprocess)
+qgis_configure()
 
 #some other functions
-source("R/functions.R")
-
+#source("R/functions.R")
+#tmap_mode("view")
 
 #########################################
 
@@ -71,6 +74,23 @@ source("scripts/prep_data/clean-osm-JIBE-regions.R")
 
 #Step 3: Get connected network from Clean OSM data
 source("scripts/prep_data/create-connected-network-JIBE-regions.R")
+
+
+#Step 4: Join mastermap width data to OSM data
+source("scripts/prep_data/join-mastermap-width-OSM-JIBE-regions.R")
+
+
+#Sept 5: Adding greenness information to OSM data
+source("scripts/prep_data/add-greenness-to-OSM.R")
+
+
+#Sept X: Adding AADT Data
+
+
+#Step XX: If additional cycle infrastructure data available from local authority, add that to OSM network.
+#At present only available for Greater Manchester. So this code block should only run for GM.
+#For other areas skip this script
+source("scripts/prep_data/add_cyclinginfra_JIBE_GreaterManchester.R")
 
 
 
