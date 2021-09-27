@@ -1,0 +1,22 @@
+!table
+!version 300
+!charset WindowsLatin1
+
+Definition Table
+  Type NATIVE Charset "WindowsLatin1"
+  Fields 10
+    ID Integer Index 1 ;
+    RouteType Integer Index 2 ;
+    RouteStatus Integer ;
+    RouteSurface Integer ;
+    NCNRoute Integer ;
+    NCNRouteNumber Integer Index 3 ;
+    Notes Char (100) ;
+    Date_updated Char (100) Index 4 ;
+    Strategic_route Integer ;
+    Mand_Advis Char (1) ;
+begin_metadata
+"\IsReadOnly" = "FALSE"
+"\MapInfo" = ""
+"\MapInfo\TableID" = "c6b9aeff-89a1-4d21-b3dc-b2abdb53ed73"
+end_metadata
