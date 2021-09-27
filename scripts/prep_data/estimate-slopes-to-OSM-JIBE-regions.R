@@ -19,7 +19,7 @@ for(a in 1:length(regions)){
 
   if(file.exists(paste0("../bigdata/dem/",regions[a],"/CR_DEM.tif"))){ #Check for input file
     if(file.exists(paste0("../bigdata/osm-slops-DEM/",regions[a],"/osm_slope.Rds"))){ #check for existing copy of output
-      message(paste0("Skipping cleaning OSM tags for ", regions[a]," as already done"))
+      message(paste0("Skipping slope estimation for ", regions[a]," as already done"))
 
     }
     else{
