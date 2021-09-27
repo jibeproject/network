@@ -38,7 +38,7 @@ for(a in 1:length(regions)){
 
   if(file.exists(paste0("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))){ #Check for input file
     if(file.exists(paste0("../bigdata/osm-mastermap-width/",regions[a],"/osm_mmap_width.Rds"))){ #check for existing copy of output
-      message(paste0("Skipping cleaning OSM tags for ", regions[a]," as already done"))
+      message(paste0("Skipping joining width to ", regions[a]," as already done"))
 
     }
     else{
@@ -126,6 +126,7 @@ for(a in 1:length(regions)){
       #Impute using missForest function for the variables in columns 2 to 6, where 2 is maxspeed, and 6 is averageWidth_median
       jointranfermissing.impu [,2:6] <- missForest(jointranfermissing.impu)$ximp[,2:6]
 
+      #drop a lot of variables, and rename the wdith variable to make sure we are clear about the imputation result
       jointranfermissing.impu <- jointranfermissing.impu %>%
         select(edgeID, averageWidth_median) %>%
         rename (averageWidth.imp = averageWidth_median)
