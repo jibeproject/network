@@ -1055,7 +1055,7 @@ for(a in 1:length(regions)){
 
       ############################################################################################################
       #remove unneeded columns
-      osm <- osm[,c("osm_id","name","ref","highway","junction","roadtype","onewaysummary","elevation","maxspeed","surface","segregated","sidewalk","cycleway.left","lanes.psv.forward","lanes.forward","lanes.backward","lanes.psv.backward","cycleway.right","cycleway.left.width","cycleway.right.width", "geometry")]
+      osm <- osm[,c("osm_id","name","ref","highway","junction","roadtype","onewaysummary","elevation","maxspeed","surface","segregated","sidewalk","bicycle","cycleway.left","lanes.psv.forward","lanes.forward","lanes.backward","lanes.psv.backward","cycleway.right","cycleway.left.width","cycleway.right.width", "geometry")]
       #osm2 <- osm %>% select(osm_id,name,ref,highway,junction,roadtype,onewaysummary,elevation,maxspeed,surface,segregated,sidewalk,cycleway.left,lanes.psv.forward,lanes.forward,lanes.backward,lanes.psv.backward,cycleway.right,cycleway.left.width,cycleway.right.width)
 
       #########################################################
