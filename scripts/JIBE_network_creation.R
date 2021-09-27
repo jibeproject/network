@@ -80,11 +80,16 @@ source("scripts/prep_data/create-connected-network-JIBE-regions.R")
 source("scripts/prep_data/join-mastermap-width-OSM-JIBE-regions.R")
 
 
-#Sept 5: Adding greenness information to OSM data
+#Step 5: Estimate slope from DTM data
+source("scripts/prep_data/estimate-slopes-to-OSM-JIBE-regions.R")
+
+
+#Sept 6: Adding greenness information to OSM data
 source("scripts/prep_data/add-greenness-to-OSM.R")
 
 
-#Sept X: Adding AADT and Speed Data
+#Sept X: Adding AADT Data
+source("scripts/prep_data/join-AADT-OSM-JIBE-regions.R")
 
 
 #Step X: Add POIs
