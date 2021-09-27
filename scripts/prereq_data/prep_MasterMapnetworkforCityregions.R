@@ -4,14 +4,29 @@ library(stringr)
 library(sf)
 library(dplyr)
 
-
+#If use Highway network (2017) data, which is upadted based on ITN network use the following code
 #mastermap full UK data from Highway network
 #mastermapUKgp <- st_read("../bigdata/MasterMaplinksUk/UKmastermapnodesHighwayWidth.gpkg") #read geopackage main file from the GLM
 #saveRDS(mastermapUKgp, "../bigdata/MasterMaplinksUk/mastermap_HW_UK.Rds") #covert to RDS for easy access
+#mastermap_UK <- readRDS("../bigdata/MasterMaplinksUk/mastermap_HW_UK.Rds")
 
-mastermap_UK <- readRDS("../bigdata/MasterMaplinksUk/mastermap_HW_UK.Rds")
 
-#Get Boundaries
+#If we use ITN data, the following code is needed to clean it before using
+#mastermap full UK data from ITN network
+mastermap_UK <- readRDS("../bigdata/MasterMaplinksUk/UKmastermaplinks.Rds")
+
+#a function to split text from number in a same column
+numextract <- function(string){
+  str_extract(string, "\\-*\\d+\\.*\\d*")
+}
+#test how the function work
+#numextract ("12.1m")
+
+#Cleaning the columns with text and numbers
+mastermap_UK$averageWidth <- as.numeric (numextract (mastermap_UK$roadWidthA))
+
+
+#Get City region Boundaries
 bounds <- readRDS("../bigdata/boundaries/cityregions/cityregions_England_10kmbuff.Rds")
 
 #subset the regions to do from the master file
@@ -51,30 +66,23 @@ for (reg in 1:length(regions)) {
 
   lines <- st_cast(lines, "LINESTRING")
 
-  saveRDS(lines, paste0("../bigdata/MasterMaplinksUk/",region_nm,"/mastermapUK-lines.Rds"))
+  lines <- st_zm(lines, drop = TRUE, what = "ZM")# deop the z dimension of the main file, it cause issues with shapefile
+
+  saveRDS(lines, paste0("../bigdata/MasterMaplinksUk/",region_nm,"/mastermapUK_lines.Rds"))
+
+  rm (reg, lines, region_shp)
 
 }
 
-rm (reg)
-rm (lines)
+
 rm (mastermap_UK)
 
+#Remove some files if necessary
+#do.call(file.remove, list(list.files(path = paste0("../bigdata/MasterMaplinksUk/"),pattern = "mastermapUK_lines.Rds$",full.names = TRUE, recursive = TRUE)))
+#st_write(mastermapUK_lines, "mastermapGM_lines.shp")
 
 
-#a function to split text from number in a same column
-# numextract <- function(string){
-#   str_extract(string, "\\-*\\d+\\.*\\d*")
-# }
-
-#test how the function work
-#numextract ("12.1m")
-
-#mastermap full UK data from ITN network
-#mastermapUK <- readRDS("../bigdata/MasterMaplinksUk/UKmastermaplinks.Rds")
-
-
-#Cleaning the columns with text and numbers
-#mastermapUK$widthavg <- as.numeric (numextract (mastermapUK$roadWidthA))
+#For other variables, if needed use this code before running the boundary loop
 #mastermapUK$elvGaInDir <- as.numeric (numextract (mastermapUK$elevationGainInDirection))
 #mastermapUK$elvGaOppDir <- as.numeric (numextract (mastermapUK$elevationGainOppositeDirection))
 
@@ -107,8 +115,4 @@ rm (mastermap_UK)
 #Track = 9
 #Traffic Island Link = 10
 #Traffic Island Link At Junction = 11
-
-
-
-
 
