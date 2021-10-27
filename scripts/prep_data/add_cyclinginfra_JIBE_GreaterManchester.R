@@ -157,5 +157,5 @@ osm <- osm %>%
   dplyr::mutate(cycleosm = ifelse(stringr::str_detect(roadtype, "Segregated Cycleway") == TRUE, as.numeric(4), cycleosm))
 
 #save for next stages
-saveRDS(osm, paste0("../bigdata/network-addedinfo/",region,"/network_added_edges.Rds"))
+saveRDS(osm, paste0("../bigdata/network-addedinfo/",region_nm,"/network_added_edges.Rds"))
 rm(osm)
