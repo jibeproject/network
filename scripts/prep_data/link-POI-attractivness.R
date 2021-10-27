@@ -55,22 +55,24 @@ gm_poi_highstreets$geog_cluster <- as.numeric(gm_poi_highstreets$geog_cluster)
 clustered_pois <- gm_poi_highstreets[gm_poi_highstreets$geog_cluster > 0, ]
 noise <- gm_poi_highstreets[gm_poi_highstreets$geog_cluster == 0, ]
 
-#create new binary (yes/no) attribute value to the osm link
-clustered_pois_var <- join %>% group_by(edgeID, pointx_class) %>% tally() %>% ungroup()
-clustered_pois_var$geom <- NULL
-
-#spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output
-join_highstr <- st_join(clustered_pois, osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output, attaches edgeIDs to points
-osm <- merge(osm, join_highstr, by.x = "edgeID", all.x = TRUE) %>% st_as_sf()
-
 #write for visual check in QGIS
 st_write(clustered_pois, file.path(paste0("02_DataOutput/network/gm/edges/poi_attr")), "clustered_pois_5_150.shp", driver="ESRI Shapefile")
 st_write(noise, file.path(paste0("02_DataOutput/network/gm/edges/poi_attr")), "poi_osm_noise_5_150.shp", driver="ESRI Shapefile")
 
+#spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output
+join_highstr <- st_join(clustered_pois, osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output, attaches edgeIDs to points
+
+#create new binary (yes/no) attribute value to the osm link
+clustered_pois_var <- join_highstr %>% group_by(edgeID, pointx_class) %>% tally() %>% ungroup()
+clustered_pois_var$geom <- NULL
+clustered_pois_var$highstr <- ifelse(clustered_pois_var$n > 0, "yes", "no")
+
+osm <- merge(osm, clustered_pois_var, by.x = "edgeID", all.x = TRUE) %>% st_as_sf()
+
 ####################
 #PART 3: Create individual and negative POIs
 ####################
-#PART 3.1:get filtered individual poi codes
+#PART 3.1:get individual poi weighted
 ################
 #read individual codes
 poi_individual_codes <- utils::read.csv(file = file.path("01_DataInput/poi/individual_codes.csv"), header = FALSE)
@@ -89,6 +91,8 @@ colnames(individual_wgt)[2] <- "weight"
 
 #merge weights
 gm_poi_individual <- merge(gm_poi_individual, individual_wgt, by = "pointx_class")
+
+#spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output
 ind_poi_osm_join <- st_join(gm_poi_individual[,c(1:2,30)], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
 ind_poi_osm_join$geometry <- NULL
 ind_count <- ind_poi_osm_join %>% group_by(edgeID, pointx_class, weight) %>% tally() %>% mutate(indpoi_score = n * weight)
@@ -135,6 +139,8 @@ colnames(negative_wgt)[2] <- "weight"
 
 #merge weights
 gm_poi_negative <- merge(gm_poi_negative, negative_wgt, by = "pointx_class")
+
+#spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output
 neg_poi_osm_join <- st_join(gm_poi_negative[,c(1:2,30)], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
 neg_poi_osm_join$geometry <- NULL
 neg_count <- neg_poi_osm_join %>% group_by(edgeID, pointx_class, weight) %>% tally() %>% mutate(negpoi_score = n * weight)
@@ -144,7 +150,7 @@ neg_count <- aggregate(. ~ edgeID, data=neg_count[,c(1,5)], FUN=sum)
 osm <- merge(osm, neg_count, by = "edgeID", all.x = TRUE)
 
 ####################
-#PART 4: get POI count and diversity
+#PART 4: get POI count and diversity (SKIP FOR NOW)
 ####################
 #get count and proportion
 clustered_pois <- join %>% group_by(osm_id, pointx_class) %>% tally() %>% ungroup()
