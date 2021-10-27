@@ -15,10 +15,6 @@ osm <- st_read(file.path("01_DataInput/Network/GreaterManchester/network-addedin
 
 #read all pois
 poi_all <- st_read(file.path("01_DataInput/poi/Download_poi_UK_1803987/poi_4138552/poi_4138552.gpkg"))
-poi_codes <- utils::read.csv(file = file.path("01_DataInput/poi/codes.csv"), header = FALSE)
-poi_codes[1,1] <- c("01020012")
-colnames(poi_codes)[1] <- "pointx_class"
-
 #constrain to Greater Manchester region
 gm_bound <- st_read(file.path("01_DataInput/Cityreg_bounds/GreaterManchester/bounds.geojson"))
 gm_poi <- st_intersection(poi_all, gm_bound)
@@ -144,7 +140,7 @@ gm_poi_negative <- merge(gm_poi_negative, negative_wgt, by = "pointx_class")
 neg_poi_osm_join <- st_join(gm_poi_negative[,c(1:2,30)], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
 neg_poi_osm_join$geometry <- NULL
 neg_count <- neg_poi_osm_join %>% group_by(edgeID, pointx_class, weight) %>% tally() %>% mutate(negpoi_score = n * weight)
-neg_count <- aggregate(. ~ edgeID, data=neg_count[,c(1,5)], FUN=sum)
+neg_count <- aggregate(. ~ edgeID, data=neg_count[,c(1,5)], FUN=sum) # !!!IMPORTANT: check if col 5 is the negpoi_score
 
 #asign new count-based attribute to osm network
 osm <- merge(osm, neg_count, by = "edgeID", all.x = TRUE)
