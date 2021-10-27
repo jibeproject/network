@@ -65,9 +65,9 @@ join_highstr <- st_join(clustered_pois, osm, join=nngeo::st_nn, maxdist = 50, k 
 #create new binary (yes/no) attribute value to the osm link
 clustered_pois_var <- join_highstr %>% group_by(edgeID, pointx_class) %>% tally() %>% ungroup()
 clustered_pois_var$geom <- NULL
-clustered_pois_var$highstr <- ifelse(clustered_pois_var$n > 0, "yes", "no")
 
-osm <- merge(osm, clustered_pois_var, by.x = "edgeID", all.x = TRUE) %>% st_as_sf()
+osm <- merge(osm, clustered_pois_var[,c(1,3)], by.x = "edgeID", all.x = TRUE) %>% st_as_sf()
+osm$highstr <- ifelse(osm$n > 0, "yes", "no") %>% select(-n)
 
 ####################
 #PART 3: Create individual and negative POIs
