@@ -70,7 +70,7 @@ cycle_points <- st_sf(as.data.frame(cycle), cycle_points) %>% st_cast("POINT") #
 #muddy routes are included-- consider excluding?
 
 #####################
-#PART 2: linking networks info
+#PART 2.1: linking networks info (done only for Greater Manchester using TfGM Cycling Network Dataset)
 #####################
 
 #snap cycling points to OSM edges
@@ -110,14 +110,31 @@ osmcycle_sf <- sf::read_sf(qgis_output(joininfo, "OUTPUT"))
 # If same OSM ID road segments have missing information we replace the null values with values from other road segments with same OSM ID
 osmcycle_sf <- osmcycle_sf %>%
   group_by(osm_id) %>% #group by OSM ID
-  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(roadtyp, "Cycleway") == TRUE, median(RouteType_majority[!is.na(RouteType_majority)]), NA)) %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(roadtype, "Cycleway") == TRUE, median(RouteType_majority[!is.na(RouteType_majority)]), NA)) %>%
   dplyr::mutate(cycleosm = replace(cycleosm, cycleosm == 0.5, 0)) %>%
   dplyr::mutate(cycleosm = replace(cycleosm, cycleosm == 1.5, 1)) %>%
   dplyr::mutate(cycleosm = replace(cycleosm, cycleosm == 2.5, 2)) %>%
   dplyr::mutate(cycleosm = replace(cycleosm, cycleosm == 3.5, 3)) %>%
-  dplyr::mutate(cycleosm = ifelse(roadtyp == "motorway - Cycling Forbidden" | roadtyp == "motorway_link - Cycling Forbidden", NA, cycleosm))
+  dplyr::mutate(cycleosm = ifelse(roadtype == "motorway - Cycling Forbidden" | roadtype == "motorway_link - Cycling Forbidden", NA, cycleosm))
 
 osmcycle_sf <- osmcycle_sf %>% dplyr::mutate(cycleinfra = ifelse(!is.na(RouteType_majority), RouteType_majority, cycleosm))
+
+#adding OSM cycling infra to complement TfGM Cycling Infra
+# JIBE                                          #osm$bicycle   #osm$roadtype             #osm$cycleway.left/OSM$cycleway.right    #osm$highway
+#4 = off road path;                                             "Segregated Cycleway"     "track"
+#3 = protected lane/ segregated lanes;                                                                                             "cycleway"
+#2 = painted lanes;                             "designated"
+#1 = Integrated lanes                                                                     "share_busway"
+#0 = Cycling link but have to walk (Tfgm 9)
+
+osmcycle_sf <- osmcycle_sf %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(cycleway.left, "lane") == TRUE | stringr::str_detect(cycleway.right, "lane") == TRUE, as.numeric(1), cycleosm)) %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(cycleway.left, "share_busway") == TRUE | stringr::str_detect(cycleway.right, "share_busway") == TRUE, as.numeric(1), cycleosm)) %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(bicycle, "designated") == TRUE, as.numeric(2), cycleosm)) %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(highway, "cycleway") == TRUE, as.numeric(3), cycleosm)) %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(cycleway.left, "track") == TRUE | stringr::str_detect(cycleway.right, "track") == TRUE, as.numeric(4), cycleosm)) %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(roadtype, "Segregated Cycleway") == TRUE, as.numeric(4), cycleosm)) %>%
+  select(-cycleinfra)
 
 #save for next stages
 saveRDS(osmcycle_sf, paste0("../bigdata/network-addedinfo/","GreaterManchester","/network_added_edges.Rds"))
@@ -127,3 +144,18 @@ st_write(osmcycle_sf, paste0("../bigdata/network-addedinfo/","GreaterManchester"
 
 #remove unnecessary files
 rm (osm, cycle, cycle_points, snap, snap_sf, snapbuffer, joininfo, osmcycle_sf)
+
+#####################
+#PART 2.2: linking networks info (done for the remaining 10 city regions using OSM 'roadtype' and 'bicycle' attributes)
+#####################
+osm <- osm %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(cycleway.left, "lane") == TRUE | stringr::str_detect(cycleway.right, "lane") == TRUE, as.numeric(1), NA)) %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(cycleway.left, "share_busway") == TRUE | stringr::str_detect(cycleway.right, "share_busway") == TRUE, as.numeric(1), cycleosm)) %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(bicycle, "designated") == TRUE, as.numeric(2), cycleosm)) %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(highway, "cycleway") == TRUE, as.numeric(3), cycleosm)) %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(cycleway.left, "track") == TRUE | stringr::str_detect(cycleway.right, "track") == TRUE, as.numeric(4), cycleosm)) %>%
+  dplyr::mutate(cycleosm = ifelse(stringr::str_detect(roadtype, "Segregated Cycleway") == TRUE, as.numeric(4), cycleosm))
+
+#save for next stages
+saveRDS(osm, paste0("../bigdata/network-addedinfo/",region,"/network_added_edges.Rds"))
+rm(osm)

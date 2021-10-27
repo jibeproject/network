@@ -1,9 +1,10 @@
 #set up
 
-if (!require("dplyr")) install.packages("dplyr")
 if (!require("sf")) install.packages("sf")
+if (!require("dplyr")) install.packages("dplyr")
 if (!require("dbscan")) install.packages("dbscan")
 if (!require("vegan")) install.packages("vegan")
+if (!require("nngeo")) install.packages("nngeo")
 
 ####################
 #PART 1: get road network and POIs (clip to GM)
@@ -22,15 +23,19 @@ colnames(poi_codes)[1] <- "pointx_class"
 gm_bound <- st_read(file.path("01_DataInput/Cityreg_bounds/GreaterManchester/bounds.geojson"))
 gm_poi <- st_intersection(poi_all, gm_bound)
 
-#interesting POIs
-poi_edgeattract <- gm_poi[gm_poi$pointx_class %in% poi_codes$pointx_class, ]
-
 ####################
 #PART 2: find POI clusters to filter out remote POI locations (run only for 'High Streets')
 ####################
+#read high street codes
+poi_highstreet_codes <- utils::read.csv(file = file.path("01_DataInput/poi/highstreet_codes.csv"), header = FALSE)
+poi_highstreet_codes[1,1] <- c("10590732")
+colnames(poi_highstreet_codes)[1] <- "pointx_class"
 
-#get poi coordinates
-poi_coors <- poi_edgeattract %>% st_coordinates()
+#get pois on High Streets
+gm_poi_highstreets <- gm_poi[gm_poi$pointx_class %in% poi_highstreet_codes$pointx_class, ]
+
+#get high street pois coordinates
+poi_coors <- gm_poi_highstreets %>% st_coordinates()
 
 #choose 'eps' (the epsilon neighborhood of one point aka. search radius) estimated from the spatial clustering of points at hand using the kNN function
 #The algorithm classifies the points in three categories: core points; reachable points and noise.Core points and reachable points are part of the same cluster
@@ -41,32 +46,51 @@ poi_coors <- poi_edgeattract %>% st_coordinates()
 kNNdistplot(poi_coors, k = 20)
 kNNdistplot(poi_coors, k = 5)
 
-#initial test on 'eps' 150 and 'kNN' 15 based on OS High Streets criteria; out of experimental try tested also for  20/200; 30/300; 20/100; 10/100; 5/50; 5/150
+#initial test on 'eps' 150 and 'kNN' 15 based on OS 'High Streets criteria'; out of experimental try tested also for  20/200; 30/300; 20/100; 10/100; 5/50; 5/150
 #from visual estimate for 'eps' based on var kNN distance curve 'minPts/eps'-- 5/500; 50/500; 10/1100; 15/1000; 20/1000; 5/750; 30/1900;
 
 #get POI clusters
-poi_edgeattract$geog_cluster <- dbscan(poi_coors, eps = 150, minPts = 5) %>% pluck('cluster') %>% as.character()
-poi_edgeattract$geog_cluster <- as.numeric(poi_edgeattract$geog_cluster)
-clustered_pois <- poi_edgeattract[poi_edgeattract$geog_cluster > 0, ]
-noise <- poi_edgeattract[poi_edgeattract$geog_cluster == 0, ]
+gm_poi_highstreets$geog_cluster <- dbscan(poi_coors, eps = 150, minPts = 10) %>% pluck('cluster') %>% as.character()
+gm_poi_highstreets$geog_cluster <- as.numeric(gm_poi_highstreets$geog_cluster)
+clustered_pois <- gm_poi_highstreets[gm_poi_highstreets$geog_cluster > 0, ]
+noise <- gm_poi_highstreets[gm_poi_highstreets$geog_cluster == 0, ]
+
+#create new binary (yes/no) attribute value to the osm link
+clustered_pois_var <- join %>% group_by(edgeID, pointx_class) %>% tally() %>% ungroup()
+clustered_pois_var$geom <- NULL
+
+#spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output
+join_highstr <- st_join(clustered_pois, osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output, attaches edgeIDs to points
+osm <- merge(osm, join_highstr, by.x = "edgeID", all.x = TRUE) %>% st_as_sf()
 
 #write for visual check in QGIS
 st_write(clustered_pois, file.path(paste0("02_DataOutput/network/gm/edges/poi_attr")), "clustered_pois_5_150.shp", driver="ESRI Shapefile")
 st_write(noise, file.path(paste0("02_DataOutput/network/gm/edges/poi_attr")), "poi_osm_noise_5_150.shp", driver="ESRI Shapefile")
 
 ####################
-#PART 3: select individual POIs
+#PART 3: Create individual and negative POIs
 ####################
-####################
-#PART 4: assign osm_id to POIs (for more fine-grain results use edgeID instead)
-####################
-#VAR 1: spatial join 1-NN (i.e. osm_id/edgeID of closest road segment to POI) -- POINT output
-join <- st_join(clustered_pois, osm, join=nngeo::st_nn, maxdist = 1000, k = 1) #good output, attaches osm_ids to points
+#read individual (positive) codes
+poi_individual_codes <- utils::read.csv(file = file.path("01_DataInput/poi/individual_codes.csv"), header = FALSE)
+poi_individual_codes[1,1] <- c("06340453")
+colnames(poi_individual_codes)[1] <- "pointx_class"
+
+#read negative codes
+poi_negative_codes <- utils::read.csv(file = file.path("01_DataInput/poi/negative_codes.csv"), header = FALSE)
+poi_negative_codes[1,1] <- c("06340462")
+colnames(poi_negative_codes)[1] <- "pointx_class"
+
+#read green space access pnts
+green_access_pnts <- st_read(file.path("01_DataInput/poi/VectorData/open-greenspace_4206589/GB_AccessPoint.shp"))
+green_access_pnts <- st_zm(green_access_pnts, drop = TRUE, what = "ZM")
+#constrain to Greater Manchester region
+gm_green_access_pnts <- st_intersection(green_access_pnts, gm_bound)
+
 #write for visual check in QGIS
 st_write(join, file.path(paste0("02_DataOutput/network/gm/edges/poi_attr")), "poi_osm_join.shp", driver="ESRI Shapefile")
 
 ####################
-#PART 5: get POI count and diversity
+#PART 4: get POI count and diversity
 ####################
 #get count and proportion
 clustered_pois <- join %>% group_by(osm_id, pointx_class) %>% tally() %>% ungroup()
