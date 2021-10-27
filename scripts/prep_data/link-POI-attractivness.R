@@ -43,8 +43,8 @@ poi_coors <- gm_poi_highstreets %>% st_coordinates()
 #distance are said to be the reachable points of that cluster that form its border points. Only core points can reach reachable (i.e. non-core) points and not the
 #the other way around. Border points that belong to the same set are said to be density connected. Points labeled as noise are the ones that are not density
 #reachable from any core point.
-kNNdistplot(poi_coors, k = 20)
-kNNdistplot(poi_coors, k = 5)
+#kNNdistplot(poi_coors, k = 20)
+#kNNdistplot(poi_coors, k = 5)
 
 #initial test on 'eps' 150 and 'kNN' 15 based on OS 'High Streets criteria'; out of experimental try tested also for  20/200; 30/300; 20/100; 10/100; 5/50; 5/150
 #from visual estimate for 'eps' based on var kNN distance curve 'minPts/eps'-- 5/500; 50/500; 10/1100; 15/1000; 20/1000; 5/750; 30/1900;
@@ -70,24 +70,78 @@ st_write(noise, file.path(paste0("02_DataOutput/network/gm/edges/poi_attr")), "p
 ####################
 #PART 3: Create individual and negative POIs
 ####################
-#read individual (positive) codes
+#PART 3.1:get filtered individual poi codes
+################
+#read individual codes
 poi_individual_codes <- utils::read.csv(file = file.path("01_DataInput/poi/individual_codes.csv"), header = FALSE)
 poi_individual_codes[1,1] <- c("06340453")
 colnames(poi_individual_codes)[1] <- "pointx_class"
 
-#read negative codes
-poi_negative_codes <- utils::read.csv(file = file.path("01_DataInput/poi/negative_codes.csv"), header = FALSE)
-poi_negative_codes[1,1] <- c("06340462")
-colnames(poi_negative_codes)[1] <- "pointx_class"
+#get individual as sf
+gm_poi_individual <- gm_poi[gm_poi$pointx_class %in% poi_individual_codes$pointx_class, ]
 
+#read individual (positive) codes weighted
+individual_wgt <- utils::read.csv(file = file.path("01_DataInput/poi/individual_wgt.csv"), header = FALSE)
+individual_wgt$V2[is.na(individual_wgt$V2)] <- as.numeric("1")
+individual_wgt[1,1] <- "06340453"
+colnames(individual_wgt)[1] <- "pointx_class"
+colnames(individual_wgt)[2] <- "weight"
+
+#merge weights
+gm_poi_individual <- merge(gm_poi_individual, individual_wgt, by = "pointx_class")
+ind_poi_osm_join <- st_join(gm_poi_individual[,c(1:2,30)], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
+ind_poi_osm_join$geometry <- NULL
+ind_count <- ind_poi_osm_join %>% group_by(edgeID, pointx_class, weight) %>% tally() %>% mutate(indpoi_score = n * weight)
+ind_count <- aggregate(. ~ edgeID, data=ind_count[,c(1,5)], FUN=sum)
+
+#asign new count-based attribute to osm network
+osm <- merge(osm, ind_count, by = "edgeID", all.x = TRUE)
+
+################
+#PART 3.2:get green space access points
+################
 #read green space access pnts
 green_access_pnts <- st_read(file.path("01_DataInput/poi/VectorData/open-greenspace_4206589/GB_AccessPoint.shp"))
 green_access_pnts <- st_zm(green_access_pnts, drop = TRUE, what = "ZM")
 #constrain to Greater Manchester region
 gm_green_access_pnts <- st_intersection(green_access_pnts, gm_bound)
 
-#write for visual check in QGIS
-st_write(join, file.path(paste0("02_DataOutput/network/gm/edges/poi_attr")), "poi_osm_join.shp", driver="ESRI Shapefile")
+#find nn on osm network
+green_osm_join <- st_join(green_access_pnts[,1], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
+green_osm_join$geometry <- NULL
+green_count <- green_osm_join %>% group_by(edgeID, id) %>% tally()
+green_count <- aggregate(. ~ edgeID, data=green_count[,c(1,3)], FUN=sum)
+
+#asign new count-based attribute to osm network
+osm <- merge(osm, green_count, by = "edgeID", all.x = TRUE)
+
+################
+#PART 3.3:get negative codes weighted
+################
+#read negative codes
+poi_negative_codes <- utils::read.csv(file = file.path("01_DataInput/poi/negative_codes.csv"), header = FALSE)
+poi_negative_codes[1,1] <- c("06340462")
+colnames(poi_negative_codes)[1] <- "pointx_class"
+
+#get individual as sf
+gm_poi_negative <- gm_poi[gm_poi$pointx_class %in% poi_negative_codes$pointx_class, ]
+
+#read negative codes weighted
+negative_wgt <- utils::read.csv(file = file.path("01_DataInput/poi/negative_wgt.csv"), header = FALSE)
+negative_wgt$V2[is.na(negative_wgt$V2)] <- as.numeric("1")
+negative_wgt[1,1] <- "06340462"
+colnames(negative_wgt)[1] <- "pointx_class"
+colnames(negative_wgt)[2] <- "weight"
+
+#merge weights
+gm_poi_negative <- merge(gm_poi_negative, negative_wgt, by = "pointx_class")
+neg_poi_osm_join <- st_join(gm_poi_negative[,c(1:2,30)], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
+neg_poi_osm_join$geometry <- NULL
+neg_count <- neg_poi_osm_join %>% group_by(edgeID, pointx_class, weight) %>% tally() %>% mutate(negpoi_score = n * weight)
+neg_count <- aggregate(. ~ edgeID, data=neg_count[,c(1,5)], FUN=sum)
+
+#asign new count-based attribute to osm network
+osm <- merge(osm, neg_count, by = "edgeID", all.x = TRUE)
 
 ####################
 #PART 4: get POI count and diversity
