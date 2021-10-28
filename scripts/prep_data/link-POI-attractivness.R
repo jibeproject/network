@@ -88,7 +88,7 @@ colnames(individual_wgt)[2] <- "weight"
 #merge weights
 gm_poi_individual <- merge(gm_poi_individual, individual_wgt, by = "pointx_class")
 
-#spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output
+#spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output, attaches edgeIDs to points
 ind_poi_osm_join <- st_join(gm_poi_individual[,c(1:2,30)], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
 ind_poi_osm_join$geometry <- NULL
 ind_count <- ind_poi_osm_join %>% group_by(edgeID, pointx_class, weight) %>% tally() %>% mutate(indpoi_score = n * weight)
@@ -106,7 +106,7 @@ green_access_pnts <- st_zm(green_access_pnts, drop = TRUE, what = "ZM")
 #constrain to Greater Manchester region
 gm_green_access_pnts <- st_intersection(green_access_pnts, gm_bound)
 
-#find nn on osm network
+#spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output, attaches edgeIDs to points
 green_osm_join <- st_join(green_access_pnts[,1], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
 green_osm_join$geometry <- NULL
 green_count <- green_osm_join %>% group_by(edgeID, id) %>% tally()
@@ -123,7 +123,7 @@ poi_negative_codes <- utils::read.csv(file = file.path("01_DataInput/poi/negativ
 poi_negative_codes[1,1] <- c("06340462")
 colnames(poi_negative_codes)[1] <- "pointx_class"
 
-#get individual as sf
+#get negative as sf
 gm_poi_negative <- gm_poi[gm_poi$pointx_class %in% poi_negative_codes$pointx_class, ]
 
 #read negative codes weighted
@@ -137,7 +137,7 @@ colnames(negative_wgt)[2] <- "weight"
 gm_poi_negative <- merge(gm_poi_negative, negative_wgt, by = "pointx_class")
 
 #spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output
-neg_poi_osm_join <- st_join(gm_poi_negative[,c(1:2,30)], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
+neg_poi_osm_join <- st_join(gm_poi_negative[,c(1:2,30)], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output, attaches edgeIDs to points
 neg_poi_osm_join$geometry <- NULL
 neg_count <- neg_poi_osm_join %>% group_by(edgeID, pointx_class, weight) %>% tally() %>% mutate(negpoi_score = n * weight)
 neg_count <- aggregate(. ~ edgeID, data=neg_count[,c(1,5)], FUN=sum) # !!!IMPORTANT: check if col 5 is the negpoi_score
