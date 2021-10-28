@@ -107,7 +107,7 @@ green_access_pnts <- st_zm(green_access_pnts, drop = TRUE, what = "ZM")
 gm_green_access_pnts <- st_intersection(green_access_pnts, gm_bound)
 
 #spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output, attaches edgeIDs to points
-green_osm_join <- st_join(green_access_pnts[,1], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
+green_osm_join <- st_join(gm_green_access_pnts[,1], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
 green_osm_join$geometry <- NULL
 green_count <- green_osm_join %>% group_by(edgeID, id) %>% tally()
 green_count <- aggregate(. ~ edgeID, data=green_count[,c(1,3)], FUN=sum)
