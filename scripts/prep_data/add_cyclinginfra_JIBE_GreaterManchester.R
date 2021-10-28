@@ -120,12 +120,12 @@ osmcycle_sf <- osmcycle_sf %>%
 osmcycle_sf <- osmcycle_sf %>% dplyr::mutate(cycleinfra = ifelse(!is.na(RouteType_majority), RouteType_majority, cycleosm))
 
 #adding OSM cycling infra to complement TfGM Cycling Infra
-# JIBE                                          #osm$bicycle   #osm$roadtype             #osm$cycleway.left/OSM$cycleway.right    #osm$highway
-#4 = off road path;                                             "Segregated Cycleway"     "track"
-#3 = protected lane/ segregated lanes;                                                                                             "cycleway"
-#2 = painted lanes;                             "designated"
-#1 = Integrated lanes                                                                     "share_busway"
-#0 = Cycling link but have to walk (Tfgm 9)
+# JIBE                                        |  #osm$bicycle   |  #osm$roadtype          |   #osm$cycleway.left/OSM$cycleway.right   | #osm$highway
+#4 = off road path;                           |                 |  "Segregated Cycleway"  |   "track"                                 |
+#3 = protected lane/ segregated lanes;        |                 |                         |                                           | "cycleway"
+#2 = painted lanes;                           |  "designated"   |                         |                                           |
+#1 = Integrated lanes                         |                 |                         |   "share_busway"                          |
+#0 = Cycling link but have to walk (Tfgm 9)   |                 |                         |                                           |
 
 osmcycle_sf <- osmcycle_sf %>%
   dplyr::mutate(cycleosm = ifelse(stringr::str_detect(cycleway.left, "lane") == TRUE | stringr::str_detect(cycleway.right, "lane") == TRUE, as.numeric(1), cycleosm)) %>%
