@@ -111,6 +111,7 @@ green_osm_join <- st_join(gm_green_access_pnts[,1], osm, join=nngeo::st_nn, maxd
 green_osm_join$geometry <- NULL
 green_count <- green_osm_join %>% group_by(edgeID, id) %>% tally()
 green_count <- aggregate(. ~ edgeID, data=green_count[,c(1,3)], FUN=sum)
+green_count <- green_count %>% mutate(green_score = n) %>% select(-n)
 
 #asign new count-based attribute to osm network
 osm <- merge(osm, green_count, by = "edgeID", all.x = TRUE)
