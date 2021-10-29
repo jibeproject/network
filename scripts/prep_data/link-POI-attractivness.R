@@ -141,7 +141,7 @@ gm_poi_negative <- merge(gm_poi_negative, negative_wgt, by = "pointx_class")
 neg_poi_osm_join <- st_join(gm_poi_negative[,c(1:2,30)], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output, attaches edgeIDs to points
 neg_poi_osm_join$geometry <- NULL
 neg_count <- neg_poi_osm_join %>% group_by(edgeID, pointx_class, weight) %>% tally() %>% mutate(negpoi_score = n * weight)
-neg_count <- aggregate(. ~ edgeID, data=neg_count[,c(1,5)], FUN=sum) # !!!IMPORTANT: check if col 5 is the negpoi_score
+neg_count <- aggregate(. ~ edgeID, data=neg_count[,c(1,5)], FUN=sum) 
 
 #asign new count-based attribute to osm network
 osm <- merge(osm, neg_count, by = "edgeID", all.x = TRUE)
