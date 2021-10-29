@@ -61,9 +61,10 @@ join_highstr <- st_join(clustered_pois, osm, join=nngeo::st_nn, maxdist = 50, k 
 #create new binary (yes/no) attribute value to the osm link
 clustered_pois_var <- join_highstr %>% group_by(edgeID, pointx_class) %>% tally() %>% ungroup()
 clustered_pois_var$geom <- NULL
+clustered_pois_var <- aggregate(. ~ edgeID, data=clustered_pois_var[,c(1,4)], FUN=sum)
 
 osm <- merge(osm, clustered_pois_var[,c(1,3)], by.x = "edgeID", all.x = TRUE) %>% st_as_sf()
-osm$highstr <- ifelse(osm$n > 0, "yes", "no") %>% select(-n)
+osm <- osm %>% mutate(highstr = ifelse(!is.na(osm$n), "yes", "no")) %>% select(-n)
 
 ####################
 #PART 3: Create individual and negative POIs
@@ -141,7 +142,7 @@ gm_poi_negative <- merge(gm_poi_negative, negative_wgt, by = "pointx_class")
 neg_poi_osm_join <- st_join(gm_poi_negative[,c(1:2,30)], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output, attaches edgeIDs to points
 neg_poi_osm_join$geometry <- NULL
 neg_count <- neg_poi_osm_join %>% group_by(edgeID, pointx_class, weight) %>% tally() %>% mutate(negpoi_score = n * weight)
-neg_count <- aggregate(. ~ edgeID, data=neg_count[,c(1,5)], FUN=sum) 
+neg_count <- aggregate(. ~ edgeID, data=neg_count[,c(1,5)], FUN=sum)
 
 #asign new count-based attribute to osm network
 osm <- merge(osm, neg_count, by = "edgeID", all.x = TRUE)
