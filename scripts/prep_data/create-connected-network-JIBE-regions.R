@@ -30,7 +30,7 @@ for(a in 1:length(regions)){
 
       osm_sf <- st_as_sf(osm)
 
-      osm_sfnetwork <- as_sfnetwork(osm_sf)
+      osm_sfnetwork <- as_sfnetwork(osm_sf, directed = FALSE, length_as_weight = TRUE)
       #add pseudo nodes for missing intersections
       osm_pseudo <- convert(osm_sfnetwork, to_spatial_subdivision)
 
@@ -87,6 +87,3 @@ for(a in 1:length(regions)){
     }}
 
   }
-
-
-
