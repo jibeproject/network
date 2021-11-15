@@ -1,6 +1,16 @@
+#set up
+rm(list = ls())
+
+if (!require("sf")) install.packages("sf")
+if (!require("dplyr")) install.packages("dplyr")
+if (!require("qgisprocess")) install.packages("qgisprocess")
+install.packages("qgisprocess", dependencies = TRUE)
+
 ####################
 #PART 1: get road network, traffic signals, crossing facilities and street lights
 ####################
+#read osm network
+osm <- st_read(file.path("01_DataInput/Network/GreaterManchester/network_edges_v2.1.gpkg"), drivers = "GPKG")
 
 #read traffic signals
 trafficsignal <- st_read(file.path("01_DataInput/TrafficSignal/SHP-format/TrafficSignals.shp"))
@@ -16,9 +26,8 @@ crossingpnts_nosign <- crossingpnts[!crossingpnts$geometry %in% crossingpnts_nos
 crossingpnts_nosign_buf <- st_buffer(crossingpnts_nosign, 20)
 
 #read street lights
-
-#read osm network
-osm <- st_read(file.path("01_DataInput/Network/GreaterManchester/network_edges_v2.1.gpkg"), drivers = "GPKG")
+streetlgh <- st_read(file.path("01_DataInput/GM_streetlights/GM_streetlights.csv"), options=c("X_POSSIBLE_NAMES=easting", "Y_POSSIBLE_NAMES=northing"))
+st_crs(streetlgh) <- 27700
 
 ####################
 #PART 2: join crossing attribute on the edge
@@ -39,9 +48,24 @@ crossings_final_type <- crossings_final %>% group_by(edgeID) %>% summarise(signa
 crossings_final_crossing <- crossings_final %>% group_by(edgeID) %>% summarise(crossingtype = paste(unique(Crossing_F), collapse = "/")) #join multiple categories
 crossings_final <- merge(crossings_final_type, crossings_final_crossing, by = "edgeID", all = TRUE)
 
-#N.B. socring system can will be added later
+#N.B. socring system for crossings will be added later
 osm <- merge(edges, crossings_final, by = "edgeID", all.x = TRUE) #attach crossing facility info on the edges
 
 ####################
 #PART 3: join street lights on the edge
 ####################
+#snap street lights points to OSM edges
+snap <- qgis_run_algorithm(
+  "native:snapgeometries",
+  BEHAVIOR = 1, #prefer closest points insert extra vertices where needed
+  INPUT = streetlgh,
+  REFERENCE_LAYER = osm,
+  TOLERANCE = 50
+)
+
+snap_sf <- sf::read_sf(qgis_output(snap, "OUTPUT"))
+snapbuffer <- st_buffer(snap_sf, dist = 0.05)
+osm_streetlgh <- st_intersection(osm[,1], snap_sf[,2]) %>% st_drop_geometry() #get edgeIDs for streetlights pnt
+osm_streetlgh <- osm_streetlgh %>% group_by(edgeID, col_ref) %>% tally() %>% mutate(streetlgh = n) %>% select(-n, -col_ref) %>% ungroup()
+
+osm <- merge(osm, edges_streetlgh, by = "edgeID", all.x = TRUE) #attach street lights count on the edges
