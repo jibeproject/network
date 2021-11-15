@@ -1,0 +1,47 @@
+####################
+#PART 1: get road network, traffic signals, crossing facilities and street lights
+####################
+
+#read traffic signals
+trafficsignal <- st_read(file.path("01_DataInput/TrafficSignal/SHP-format/TrafficSignals.shp"))
+
+#read crossing points
+crossingpnts <- st_read(file.path("01_DataInput/Network/GM_cycle/BeeNetwork/SHP/CrossingPoints_point.shp"))
+crossingpnts <- crossingpnts[crossingpnts$Status == "Existing", ] #keep only existing
+
+#attributes spatial join
+trafficsignal_buf <- st_buffer(trafficsignal, 20) #buffer existing TrafficSignals locations to remove crossing points
+crossingpnts_nosign <- st_intersection(crossingpnts, trafficsignal_buf)
+crossingpnts_nosign <- crossingpnts[!crossingpnts$geometry %in% crossingpnts_nosign$geometry, ] #keep only points not in TrafficSignals dataset
+crossingpnts_nosign_buf <- st_buffer(crossingpnts_nosign, 20)
+
+#read street lights
+
+#read osm network
+osm <- st_read(file.path("01_DataInput/Network/GreaterManchester/network_edges_v2.1.gpkg"), drivers = "GPKG")
+
+####################
+#PART 2: join crossing attribute on the edge
+####################
+#traffic signal
+osm_trafficsignal <- osm[,c("edgeID", "highway")]
+osm_trafficsignal <- osm_trafficsignal[osm_trafficsignal$highway != "motorway" & osm_trafficsignal$highway != "motorway_link", ]
+osm_trafficsignal <- st_intersection(osm_trafficsignal, trafficsignal_buf[,c(3,26)]) %>% st_drop_geometry() %>% select(-highway) #get edgeIDs for trafficsignals
+
+#crossing facility
+osm_crossingpnts_nosign <- osm[,c("edgeID", "highway")]
+osm_crossingpnts_nosign <- osm_crossingpnts_nosign[osm_crossingpnts_nosign$highway != "motorway" & osm_crossingpnts_nosign$highway != "motorway_link", ]
+osm_crossingpnts_nosign <- st_intersection(osm_crossingpnts_nosign, crossingpnts_nosign_buf[,3]) %>% st_drop_geometry() %>% select(-highway)#get edgeIDs for crossing pnt
+
+#join traffic with crossing
+crossings_final <- merge(osm_trafficsignal, osm_crossingpnts_nosign, by = "edgeID", all = TRUE)
+crossings_final_type <- crossings_final %>% group_by(edgeID) %>% summarise(signaltype = paste(unique(Type), collapse = "/"))
+crossings_final_crossing <- crossings_final %>% group_by(edgeID) %>% summarise(crossingtype = paste(unique(Crossing_F), collapse = "/")) #join multiple categories
+crossings_final <- merge(crossings_final_type, crossings_final_crossing, by = "edgeID", all = TRUE)
+
+#N.B. socring system can will be added later
+osm <- merge(edges, crossings_final, by = "edgeID", all.x = TRUE) #attach crossing facility info on the edges
+
+####################
+#PART 3: join street lights on the edge
+####################
