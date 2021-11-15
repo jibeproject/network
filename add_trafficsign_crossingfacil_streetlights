@@ -60,12 +60,12 @@ snap <- qgis_run_algorithm(
   BEHAVIOR = 1, #prefer closest points insert extra vertices where needed
   INPUT = streetlgh,
   REFERENCE_LAYER = osm,
-  TOLERANCE = 50
+  TOLERANCE = 15
 )
 
 snap_sf <- sf::read_sf(qgis_output(snap, "OUTPUT"))
 snapbuffer <- st_buffer(snap_sf, dist = 0.05)
 osm_streetlgh <- st_intersection(osm[,1], snap_sf[,2]) %>% st_drop_geometry() #get edgeIDs for streetlights pnt
-osm_streetlgh <- osm_streetlgh %>% group_by(edgeID, col_ref) %>% tally() %>% mutate(streetlgh = n) %>% select(-n, -col_ref) %>% ungroup()
+osm_streetlgh <- osm_streetlgh %>% group_by(edgeID, col_ref) %>% tally() %>% mutate(strlgh_count = n) %>% select(-n, -col_ref) %>% ungroup()
 
 osm <- merge(osm, edges_streetlgh, by = "edgeID", all.x = TRUE) #attach street lights count on the edges
