@@ -38,6 +38,8 @@ osm_trafficsignal <- osm_trafficsignal[osm_trafficsignal$highway != "motorway" &
 osm_trafficsignal <- st_intersection(osm_trafficsignal, trafficsignal_buf[,c(3,26)]) %>% st_drop_geometry() %>% select(-highway) #get edgeIDs for trafficsignals
 osm_trafficsignal<- osm_trafficsignal[edges_trafficsignal$Type != "Wig Wag", ]
 osm_trafficsignal <- osm_trafficsignal %>% group_by(edgeID, Type, Crossing_F) %>% tally() %>% ungroup()
+#tally Toucan traffic signals (shared ped/cycl signal controlled crossings)
+bike_trafficsignal <- osm_trafficsignal[grepl("Toucan | Toucan with PCAT | Double Toucan | Dual Toucan", edges_trafficsignal$Type) | grepl("TOUCAN", edges_trafficsignal$Crossing_F), ]
 
 #crossing facility
 osm_crossingpnts_nosign <- osm[,c("edgeID", "highway")]
@@ -110,10 +112,8 @@ osm <- osm %>% mutate(cross_ratio = cros_cnt/length*signaltype)
 ####################
 #PART 4: add bike crossing attribute
 ####################
-#tally Toucan traffic signals (shared ped/cycl signal controlled crossings)
-bike_trafficsignal <- osm_trafficsignal[grepl("Toucan | Toucan with PCAT | Double Toucan | Dual Toucan", edges_trafficsignal$Type) | grepl("TOUCAN", edges_trafficsignal$Crossing_F), ]
 
-#add to the edges
+#add bike trafficsignals to edges
 osm <- merge(osm, bike_trafficsignal[,c("edgeID","n")])
 colnames(osm)[colnames(osm) == "n"] <- "bike_cros_cnt"
 
