@@ -30,34 +30,103 @@ streetlgh <- st_read(file.path("01_DataInput/GM_streetlights/GM_streetlights.csv
 st_crs(streetlgh) <- 27700
 
 ####################
-#PART 2: join crossing attribute on the edge
+#PART 2: addign edgeID to crossing/trafficsignal attribute
 ####################
 #traffic signal
 osm_trafficsignal <- osm[,c("edgeID", "highway")]
 osm_trafficsignal <- osm_trafficsignal[osm_trafficsignal$highway != "motorway" & osm_trafficsignal$highway != "motorway_link", ]
 osm_trafficsignal <- st_intersection(osm_trafficsignal, trafficsignal_buf[,c(3,26)]) %>% st_drop_geometry() %>% select(-highway) #get edgeIDs for trafficsignals
+osm_trafficsignal<- osm_trafficsignal[edges_trafficsignal$Type != "Wig Wag", ]
+osm_trafficsignal <- osm_trafficsignal %>% group_by(edgeID, Type, Crossing_F) %>% tally() %>% ungroup()
 
 #crossing facility
 osm_crossingpnts_nosign <- osm[,c("edgeID", "highway")]
 osm_crossingpnts_nosign <- osm_crossingpnts_nosign[osm_crossingpnts_nosign$highway != "motorway" & osm_crossingpnts_nosign$highway != "motorway_link", ]
 osm_crossingpnts_nosign <- st_intersection(osm_crossingpnts_nosign, crossingpnts_nosign_buf[,3]) %>% st_drop_geometry() %>% select(-highway)#get edgeIDs for crossing pnt
+osm_crossingpnts_nosign <- osm_crossingpnts_nosign %>% group_by(edgeID, Object_Ref) %>% tally() %>% ungroup()
+
+#tally trafficsignal var 'type' and 'crossing facility' per edge-- multiple facilities per edge are merged
+crossings_final_type <- osm_trafficsignal %>% group_by(edgeID) %>% summarise(signaltype = paste(unique(Type), collapse = "/"), signal_cnt = sum(n))
+crossings_final_crossing <- osm_trafficsignal %>% group_by(edgeID) %>% summarise(crossingtype = paste(unique(Crossing_F), collapse = "/"))
 
 #join traffic with crossing
-crossings_final <- merge(osm_trafficsignal, osm_crossingpnts_nosign, by = "edgeID", all = TRUE)
-crossings_final_type <- crossings_final %>% group_by(edgeID) %>% summarise(signaltype = paste(unique(Type), collapse = "/"))
-crossings_final_crossing <- crossings_final %>% group_by(edgeID) %>% summarise(crossingtype = paste(unique(Crossing_F), collapse = "/")) #join multiple categories
 crossings_final <- merge(crossings_final_type, crossings_final_crossing, by = "edgeID", all = TRUE)
+crossings_final <- merge(crossings_final, osm_crossingpnts_nosign, by = "edgeID", all = TRUE) %>% ungroup()
+crossings_final$signal_cnt <- ifelse(is.na(crossings_final$signal_cnt), as.numeric(0), crossings_final$signal_cnt)
+crossings_final$n <- ifelse(is.na(crossings_final$n), as.numeric(0), crossings_final$n)
 
-#N.B. socring system for crossings will be added later
-osm <- merge(edges, crossings_final, by = "edgeID", all.x = TRUE) #attach crossing facility info on the edges
+crossings_final$cros_cnt <- rowSums(crossings_final[,c("signal_cnt", "n")])
+crossings_final$crossingtype <- ifelse(is.na(crossings_final$crossingtype) | stringr::str_detect(crossings_final$crossingtype, "NA") == TRUE, crossings_final$Object_Ref, crossings_final$crossingtype)
+crossings_final <- crossings_final %>% select(-c("Object_Ref", "signal_cnt", "n"))
 
 ####################
-#PART 3: join street lights on the edge
+#PART 3: add weight variable
+####################
+#Type            | Crossing Facility                                   JIBE
+
+#link with no crossing facilities                                      1 - very hard
+#Double Pelican  | PEDESTRIAN                                          3 - fairly easy
+#Double Toucan   | TOUCAN or PEDESTRIAN or Pedestrian                  3 - fairly easy
+#Double Puffin   | PEDESTRIAN                                          3 - fairly easy
+#Dual Toucan     | PEDESTRIAN                                          2 - hard
+#Dual Puffin     | PEDESTRIAN                                          2 - hard
+#Wig Wag         | NA                                                  REMOVED
+#Signal          | 1251 NA + 86 TOUCAN or PEDESTRIAN + 25 PEGASUS      4 - easy
+#Toucan          | TOUCAN or Pedestrian or NA                          4 - easy
+#Pegasus         | PEDESTRIAN or PEGASUS                               4 - easy
+#Pelican         | PEDESTRIAN                                          5 - very easy
+#Puffin          | PEDESTRIAN or TOUCAN or NA or PUFFIN                5 - very easy
+#Toucan with PCAT| Pedestrian                                          5 - very easy
+#Puffin with PCAT| PEDESTRIAN                                          5 - very easy
+#Signal (Trunk)  | PEDESTRIAN or TOUCAN                                3 - fairly easy
+#Pelican (Trunk) | PEDESTRIAN                                          3 - fairly easy
+#Puffin (Trunk)  | PEDESTRIAN                                          3 - fairly easy
+
+#add 'Signal' type for crossings missing information
+crossings_final$signaltype <- ifelse(is.na(crossings_final$signaltype), "Signal", crossings_final$signaltype)
+
+#replace nominal with Likert score
+crossings_final$signaltype <- ifelse(stringr::str_detect(crossings_final$signaltype, "Double Pelican") == TRUE | stringr::str_detect(crossings_final$signaltype, "Double Toucan") == TRUE |
+           stringr::str_detect(crossings_final$signaltype, "Double Puffin") == TRUE | stringr::str_detect(crossings_final$signaltype, "Signal (Trunk)") == TRUE |
+           stringr::str_detect(crossings_final$signaltype, "Pelican (Trunk)") == TRUE | stringr::str_detect(crossings_final$signaltype, "Puffin (Trunk)") == TRUE , as.numeric(3), crossings_final$signaltype)
+crossings_final$signaltype <- ifelse(stringr::str_detect(crossings_final$signaltype, "Dual Toucan") == TRUE | stringr::str_detect(crossings_final$signaltype, "Double Puffin") == TRUE, as.numeric(2), crossings_final$signaltype)
+crossings_final$signaltype <- ifelse(stringr::str_detect(crossings_final$signaltype, "Signal") == TRUE | stringr::str_detect(crossings_final$signaltype, "Toucan") == TRUE |
+           stringr::str_detect(crossings_final$signaltype, "Pegasus") == TRUE, as.numeric(4), crossings_final$signaltype)
+crossings_final$signaltype <- ifelse(stringr::str_detect(crossings_final$signaltype, "Pelican") == TRUE | stringr::str_detect(crossings_final$signaltype, "Puffin") == TRUE |
+           stringr::str_detect(crossings_final$signaltype, "Toucan with PCAT") == TRUE | stringr::str_detect(crossings_final$signaltype, "Puffin with PCAT") == TRUE, as.numeric(5), crossings_final$signaltype)
+crossings_final <- crossings_final %>% select(-crossingtype)
+
+#add to the edges
+osm <- merge(osm, crossings_final, by = "edgeID", all.x = TRUE) #attach crossing facility info on the edges
+osm$signaltype <- as.numeric(osm$signaltype)
+
+#replace NAs for 'signaltype' with 1 (very hard to cross) and 'cros_cnt' with 0
+osm$signaltype <- ifelse(is.na(osm$signaltype), as.numeric(1), osm$signaltype)
+osm$cros_cnt<- ifelse(is.na(osm$cros_cnt), as.numeric(0), osm$cros_cnt)
+
+#get crossings ratio per edge length
+osm <- osm %>% mutate(cross_ratio = cros_cnt/length*signaltype)
+
+####################
+#PART 4: add bike crossing attribute
+####################
+#tally Toucan traffic signals (shared ped/cycl signal controlled crossings)
+bike_trafficsignal <- osm_trafficsignal[grepl("Toucan | Toucan with PCAT | Double Toucan | Dual Toucan", edges_trafficsignal$Type) | grepl("TOUCAN", edges_trafficsignal$Crossing_F), ]
+
+#add to the edges
+osm <- merge(osm, bike_trafficsignal[,c("edgeID","n")])
+colnames(osm)[colnames(osm) == "n"] <- "bike_cros_cnt"
+
+#get crossings ratio per edge length
+osm <- oam %>% mutate(bike_cross_ratio = bike_cros_cnt/length*signaltype)
+
+####################
+#PART 5: join street lights on the edge
 ####################
 #snap street lights points to OSM edges
 snap <- qgis_run_algorithm(
   "native:snapgeometries",
-  BEHAVIOR = 1, #prefer closest points insert extra vertices where needed
+  BEHAVIOR = 3, #Prefer closest point, don't insert new vertices
   INPUT = streetlgh,
   REFERENCE_LAYER = osm,
   TOLERANCE = 15
@@ -68,4 +137,5 @@ snapbuffer <- st_buffer(snap_sf, dist = 0.05)
 osm_streetlgh <- st_intersection(osm[,1], snap_sf[,2]) %>% st_drop_geometry() #get edgeIDs for streetlights pnt
 osm_streetlgh <- osm_streetlgh %>% group_by(edgeID, col_ref) %>% tally() %>% mutate(strlgh_count = n) %>% select(-n, -col_ref) %>% ungroup()
 
+#add to the edges
 osm <- merge(osm, edges_streetlgh, by = "edgeID", all.x = TRUE) #attach street lights count on the edges
