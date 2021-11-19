@@ -40,6 +40,7 @@ osm_trafficsignal<- osm_trafficsignal[edges_trafficsignal$Type != "Wig Wag", ]
 osm_trafficsignal <- osm_trafficsignal %>% group_by(edgeID, Type, Crossing_F) %>% tally() %>% ungroup()
 #tally Toucan traffic signals (shared ped/cycl signal controlled crossings)
 bike_trafficsignal <- osm_trafficsignal[grepl("Toucan | Toucan with PCAT | Double Toucan | Dual Toucan", edges_trafficsignal$Type) | grepl("TOUCAN", edges_trafficsignal$Crossing_F), ]
+bike_trafficsignal <- bike_trafficsignal %>% group_by(edgeID) %>% summarise(signaltype = paste(unique(Type), collapse = "/"), bike_cros_cnt = sum(n))
 
 #crossing facility
 osm_crossingpnts_nosign <- osm[,c("edgeID", "highway")]
@@ -114,8 +115,7 @@ osm <- osm %>% mutate(cross_ratio = cros_cnt/length*signaltype)
 ####################
 
 #add bike trafficsignals to edges
-osm <- merge(osm, bike_trafficsignal[,c("edgeID","n")])
-colnames(osm)[colnames(osm) == "n"] <- "bike_cros_cnt"
+osm <- merge(osm, bike_trafficsignal[,c("edgeID", "bike_cros_cnt")], all.x = TRUE)
 
 #get crossings ratio per edge length
 osm <- oam %>% mutate(bike_cross_ratio = bike_cros_cnt/length*signaltype)
