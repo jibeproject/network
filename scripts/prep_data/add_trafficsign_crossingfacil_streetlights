@@ -115,7 +115,8 @@ osm <- osm %>% mutate(cross_ratio = cros_cnt/length*signaltype)
 ####################
 
 #add bike trafficsignals to edges
-osm <- merge(osm, bike_trafficsignal[,c("edgeID", "bike_cros_cnt")], all.x = TRUE)
+osm <- merge(osm, bike_trafficsignal[,c("edgeID", "bike_cros_cnt")], all = TRUE)
+edges$bike_cros_cnt<- ifelse(is.na(edges$bike_cros_cnt), as.numeric(0), edges$bike_cros_cnt) #replace NAs with 0
 
 #get crossings ratio per edge length
 osm <- oam %>% mutate(bike_cross_ratio = bike_cros_cnt/length*signaltype)
@@ -135,7 +136,10 @@ snap <- qgis_run_algorithm(
 snap_sf <- sf::read_sf(qgis_output(snap, "OUTPUT"))
 snapbuffer <- st_buffer(snap_sf, dist = 0.05)
 osm_streetlgh <- st_intersection(osm[,1], snap_sf[,2]) %>% st_drop_geometry() #get edgeIDs for streetlights pnt
-osm_streetlgh <- osm_streetlgh %>% group_by(edgeID, col_ref) %>% tally() %>% mutate(strlgh_count = n) %>% select(-n, -col_ref) %>% ungroup()
+osm_streetlgh <- osm_streetlgh %>% group_by(edgeID) %>% tally() %>% mutate(strlgh_count = n) %>% select(-n) %>% ungroup()
 
 #add to the edges
-osm <- merge(osm, edges_streetlgh, by = "edgeID", all.x = TRUE) #attach street lights count on the edges
+osm <- merge(osm, osm_streetlgh, by = "edgeID", all = TRUE) #attach crossing facility info on the edges
+osm$streetlgh <- ifelse(is.na(osm$streetlgh), as.numeric(0), osm$streetlgh) #replace NAs with 0
+
+saveRDS(osm, paste0("../bigdata/Greenness/Canopy/",regions[a],"/crossings_streetlgts.Rds"))
