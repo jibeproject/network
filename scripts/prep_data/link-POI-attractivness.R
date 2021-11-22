@@ -150,6 +150,7 @@ neg_count <- aggregate(. ~ edgeID, data=neg_count[,c("edgeID", "negpoi_score")],
 #asign new count-based attribute to osm network
 osm <- merge(osm, neg_count, by = "edgeID", all.x = TRUE)
 
+saveRDS(osm,paste0("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
 ####################
 #PART 4: get POI count and diversity (SKIP FOR NOW)
 ####################
@@ -174,5 +175,3 @@ colnames(simpson)[1] <- "simpson"
 #join both back to osm
 osm_edgeattr <- merge(osm, shannon, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
 osm_edgeattr <- merge(osm_edgeattr, simpson, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
-
-saveRDS(edges,paste0("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
