@@ -6,24 +6,27 @@ if (!require("dbscan")) install.packages("dbscan")
 if (!require("vegan")) install.packages("vegan")
 if (!require("nngeo")) install.packages("nngeo")
 
+region_nm <- as.character("GreaterManchester")
+regions <- regions.todo
+
 ####################
 #PART 1: get road network and POIs (clip to GM)
 ####################
 
 #read GM network
-osm <- st_read(file.path("01_DataInput/Network/GreaterManchester/network-addedinfo.geojson"))
+osm <- st_read(file.path("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
 
 #read all pois
-poi_all <- st_read(file.path("01_DataInput/poi/Download_poi_UK_1803987/poi_4138552/poi_4138552.gpkg"))
+poi_all <- st_read(file.path("01_DataInput/poi/Download_poi_UK_1803987/poi_4138552/poi_4138552.gpkg")) #add this from V-drive as this is not a public dataset
 #constrain to Greater Manchester region
-gm_bound <- st_read(file.path("01_DataInput/Cityreg_bounds/GreaterManchester/bounds.geojson"))
+gm_bound <- st_read(file.path("../bigdata/boundaries/cityregions/",region_nm,"/bounds.geojson"))
 gm_poi <- st_intersection(poi_all, gm_bound)
 
 ####################
 #PART 2: find POI clusters to filter out remote POI locations (run only for 'High Streets')
 ####################
 #read high street codes
-poi_highstreet_codes <- utils::read.csv(file = file.path("01_DataInput/poi/highstreet_codes.csv"), header = FALSE)
+poi_highstreet_codes <- utils::read.csv(file = file.path("../bigdata/highstreet_codes.csv"), header = FALSE)
 poi_highstreet_codes[1,1] <- c("10590732")
 colnames(poi_highstreet_codes)[1] <- "pointx_class"
 
@@ -52,8 +55,8 @@ clustered_pois <- gm_poi_highstreets[gm_poi_highstreets$geog_cluster > 0, ]
 noise <- gm_poi_highstreets[gm_poi_highstreets$geog_cluster == 0, ]
 
 #write for visual check in QGIS
-st_write(clustered_pois, file.path(paste0("02_DataOutput/network/gm/edges/poi_attr")), "clustered_pois_5_150.shp", driver="ESRI Shapefile")
-st_write(noise, file.path(paste0("02_DataOutput/network/gm/edges/poi_attr")), "poi_osm_noise_5_150.shp", driver="ESRI Shapefile")
+#st_write(clustered_pois, file.path(paste0("02_DataOutput/network/gm/edges/poi_attr")), "clustered_pois_5_150.shp", driver="ESRI Shapefile")
+#st_write(noise, file.path(paste0("02_DataOutput/network/gm/edges/poi_attr")), "poi_osm_noise_5_150.shp", driver="ESRI Shapefile")
 
 #spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output
 join_highstr <- st_join(clustered_pois, osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output, attaches edgeIDs to points
@@ -61,9 +64,9 @@ join_highstr <- st_join(clustered_pois, osm, join=nngeo::st_nn, maxdist = 50, k 
 #create new binary (yes/no) attribute value to the osm link
 clustered_pois_var <- join_highstr %>% group_by(edgeID, pointx_class) %>% tally() %>% ungroup()
 clustered_pois_var$geom <- NULL
-clustered_pois_var <- aggregate(. ~ edgeID, data=clustered_pois_var[,c(1,4)], FUN=sum)
+clustered_pois_var <- aggregate(. ~ edgeID, data=clustered_pois_var[,c("edgeID","n")], FUN=sum)
 
-osm <- merge(osm, clustered_pois_var[,c(1,3)], by.x = "edgeID", all.x = TRUE) %>% st_as_sf()
+osm <- merge(osm, clustered_pois_var, by.x = "edgeID", all.x = TRUE) %>% st_as_sf()
 osm <- osm %>% mutate(highstr = ifelse(!is.na(osm$n), "yes", "no")) %>% select(-n)
 
 ####################
@@ -72,7 +75,7 @@ osm <- osm %>% mutate(highstr = ifelse(!is.na(osm$n), "yes", "no")) %>% select(-
 #PART 3.1:get individual poi weighted
 ################
 #read individual codes
-poi_individual_codes <- utils::read.csv(file = file.path("01_DataInput/poi/individual_codes.csv"), header = FALSE)
+poi_individual_codes <- utils::read.csv(file = file.path("../bigdata/individual_codes.csv"), header = FALSE)
 poi_individual_codes[1,1] <- c("06340453")
 colnames(poi_individual_codes)[1] <- "pointx_class"
 
@@ -80,7 +83,7 @@ colnames(poi_individual_codes)[1] <- "pointx_class"
 gm_poi_individual <- gm_poi[gm_poi$pointx_class %in% poi_individual_codes$pointx_class, ]
 
 #read individual (positive) codes weighted
-individual_wgt <- utils::read.csv(file = file.path("01_DataInput/poi/individual_wgt.csv"), header = FALSE)
+individual_wgt <- utils::read.csv(file = file.path("../bigdata/individual_wgt.csv"), header = FALSE)
 individual_wgt$V2[is.na(individual_wgt$V2)] <- as.numeric("1")
 individual_wgt[1,1] <- "06340453"
 colnames(individual_wgt)[1] <- "pointx_class"
@@ -90,10 +93,10 @@ colnames(individual_wgt)[2] <- "weight"
 gm_poi_individual <- merge(gm_poi_individual, individual_wgt, by = "pointx_class")
 
 #spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output, attaches edgeIDs to points
-ind_poi_osm_join <- st_join(gm_poi_individual[,c(1:2,30)], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
+ind_poi_osm_join <- st_join(gm_poi_individual[,c("pointx_class", "ref_no", "weight")], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
 ind_poi_osm_join$geometry <- NULL
 ind_count <- ind_poi_osm_join %>% group_by(edgeID, pointx_class, weight) %>% tally() %>% mutate(indpoi_score = n * weight)
-ind_count <- aggregate(. ~ edgeID, data=ind_count[,c(1,5)], FUN=sum)
+ind_count <- aggregate(. ~ edgeID, data=ind_count[,c("edgeID", "indpoi_score")], FUN=sum)
 
 #asign new count-based attribute to osm network
 osm <- merge(osm, ind_count, by = "edgeID", all.x = TRUE)
@@ -102,7 +105,7 @@ osm <- merge(osm, ind_count, by = "edgeID", all.x = TRUE)
 #PART 3.2:get green space access points
 ################
 #read green space access pnts
-green_access_pnts <- st_read(file.path("01_DataInput/poi/VectorData/open-greenspace_4206589/GB_AccessPoint.shp"))
+green_access_pnts <- st_read(file.path("01_DataInput/poi/VectorData/open-greenspace_4206589/GB_AccessPoint.shp")) #add this from V-drive as this is not a public dataset
 green_access_pnts <- st_zm(green_access_pnts, drop = TRUE, what = "ZM")
 #constrain to Greater Manchester region
 gm_green_access_pnts <- st_intersection(green_access_pnts, gm_bound)
@@ -111,7 +114,7 @@ gm_green_access_pnts <- st_intersection(green_access_pnts, gm_bound)
 green_osm_join <- st_join(gm_green_access_pnts[,1], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output
 green_osm_join$geometry <- NULL
 green_count <- green_osm_join %>% group_by(edgeID, id) %>% tally()
-green_count <- aggregate(. ~ edgeID, data=green_count[,c(1,3)], FUN=sum)
+green_count <- aggregate(. ~ edgeID, data=green_count[,c("edgeID", "n")], FUN=sum)
 green_count <- green_count %>% mutate(green_count = n) %>% select(-n)
 
 #asign new count-based attribute to osm network
@@ -129,7 +132,7 @@ colnames(poi_negative_codes)[1] <- "pointx_class"
 gm_poi_negative <- gm_poi[gm_poi$pointx_class %in% poi_negative_codes$pointx_class, ]
 
 #read negative codes weighted
-negative_wgt <- utils::read.csv(file = file.path("01_DataInput/poi/negative_wgt.csv"), header = FALSE)
+negative_wgt <- utils::read.csv(file = file.path("../bigdata/negative_wgt.csv"), header = FALSE)
 negative_wgt$V2[is.na(negative_wgt$V2)] <- as.numeric("1")
 negative_wgt[1,1] <- "06340462"
 colnames(negative_wgt)[1] <- "pointx_class"
@@ -139,10 +142,10 @@ colnames(negative_wgt)[2] <- "weight"
 gm_poi_negative <- merge(gm_poi_negative, negative_wgt, by = "pointx_class")
 
 #spatial join 1-NN (i.e. edgeID of the closest road segment to POI) -- POINT output
-neg_poi_osm_join <- st_join(gm_poi_negative[,c(1:2,30)], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output, attaches edgeIDs to points
+neg_poi_osm_join <- st_join(gm_poi_negative[,c("pointx_class", "ref_no", "weight")], osm, join=nngeo::st_nn, maxdist = 50, k = 1) #point output, attaches edgeIDs to points
 neg_poi_osm_join$geometry <- NULL
 neg_count <- neg_poi_osm_join %>% group_by(edgeID, pointx_class, weight) %>% tally() %>% mutate(negpoi_score = n * weight)
-neg_count <- aggregate(. ~ edgeID, data=neg_count[,c(1,5)], FUN=sum)
+neg_count <- aggregate(. ~ edgeID, data=neg_count[,c("edgeID", "negpoi_score")], FUN=sum)
 
 #asign new count-based attribute to osm network
 osm <- merge(osm, neg_count, by = "edgeID", all.x = TRUE)
@@ -172,4 +175,4 @@ colnames(simpson)[1] <- "simpson"
 osm_edgeattr <- merge(osm, shannon, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
 osm_edgeattr <- merge(osm_edgeattr, simpson, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
 
-st_write(osm_edgeattr, file.path(paste0("02_DataOutput/network/gm/edges/poi_attr")), "osm_edgeattr_shan_sim.shp", driver="ESRI Shapefile")
+saveRDS(edges,paste0("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
