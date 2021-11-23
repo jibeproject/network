@@ -10,13 +10,13 @@ install.packages("qgisprocess", dependencies = TRUE)
 #PART 1: get road network, traffic signals, crossing facilities and street lights
 ####################
 #read osm network
-osm <- st_read(file.path("01_DataInput/Network/GreaterManchester/network_edges_v2.1.gpkg"), drivers = "GPKG")
+osm <- st_read(file.path("01_DataInput/Network/GreaterManchester/network_edges_v2.1.gpkg"), drivers = "GPKG") #add this from V-drive as this is not a public dataset
 
 #read traffic signals
-trafficsignal <- st_read(file.path("01_DataInput/TrafficSignal/SHP-format/TrafficSignals.shp"))
+trafficsignal <- st_read(file.path("../bigdata/osm-crossings-trafficsign/trafficsignal.Rds"))
 
 #read crossing points
-crossingpnts <- st_read(file.path("01_DataInput/Network/GM_cycle/BeeNetwork/SHP/CrossingPoints_point.shp"))
+crossingpnts <- st_read(file.path("../bigdata/osm-crossings-trafficsign/crossingpnts.Rds"))
 crossingpnts <- crossingpnts[crossingpnts$Status == "Existing", ] #keep only existing
 
 #attributes spatial join
@@ -26,7 +26,7 @@ crossingpnts_nosign <- crossingpnts[!crossingpnts$geometry %in% crossingpnts_nos
 crossingpnts_nosign_buf <- st_buffer(crossingpnts_nosign, 20)
 
 #read street lights
-streetlgh <- st_read(file.path("01_DataInput/GM_streetlights/GM_streetlights.csv"), options=c("X_POSSIBLE_NAMES=easting", "Y_POSSIBLE_NAMES=northing"))
+streetlgh <- st_read(file.path("01_DataInput/GM_streetlights/GM_streetlights.csv"), options=c("X_POSSIBLE_NAMES=easting", "Y_POSSIBLE_NAMES=northing"))  #add this from V-drive as this is not a public dataset
 st_crs(streetlgh) <- 27700
 
 ####################
@@ -135,11 +135,44 @@ snap <- qgis_run_algorithm(
 
 snap_sf <- sf::read_sf(qgis_output(snap, "OUTPUT"))
 snapbuffer <- st_buffer(snap_sf, dist = 0.05)
-osm_streetlgh <- st_intersection(osm[,1], snap_sf[,2]) %>% st_drop_geometry() #get edgeIDs for streetlights pnt
+osm_streetlgh <- st_intersection(osm[ , "edgeID"], snapbuffer[ ,"col_ref"]) %>% st_drop_geometry() #get edgeIDs for streetlights pnt
 osm_streetlgh <- osm_streetlgh %>% group_by(edgeID) %>% tally() %>% mutate(strlgh_count = n) %>% select(-n) %>% ungroup()
 
 #add to the edges
 osm <- merge(osm, osm_streetlgh, by = "edgeID", all = TRUE) #attach crossing facility info on the edges
 osm$streetlgh <- ifelse(is.na(osm$streetlgh), as.numeric(0), osm$streetlgh) #replace NAs with 0
+
+####################
+#PART 6: join traffic calming on the edge
+####################
+
+traffic_calm <- st_read(file.path("01_DataInput/TrafficCalming/20210823_OSDataForCambridge/TrafficCalmingLine_polyline.shp")) #add this from V-drive as this is not a public dataset
+
+sample <- qgis_run_algorithm(
+  "native:pointsalonglines",
+  INPUT = traffic_calm,
+  DISTANCE = 30,
+  START_OFFSET = 1,
+  END_OFFSET = 1
+)
+
+sample_sf <- sf::read_sf(qgis_output(sample, "OUTPUT"))
+
+#snap traffic calming points to OSM edges
+snap <- qgis_run_algorithm(
+  "native:snapgeometries",
+  BEHAVIOR = 1, #Prefer closest point, insert extra vertices where required
+  INPUT = sample_sf,
+  REFERENCE_LAYER = edges,
+  TOLERANCE = 10
+)
+
+snap_sf <- sf::read_sf(qgis_output(snap, "OUTPUT"))
+snapbuffer <- st_buffer(snap_sf, dist = 0.05)
+
+#add traffic_calm info to edges
+osm_traffic_calm <- st_intersection(osm[,"edgeID"], snapbuffer[,"structure"]) %>% st_drop_geometry() #get edgeIDs for traffic_calm pnt
+osm_traffic_calm <- distinct(osm_traffic_calm)
+osm <- merge(osm, osm_traffic_calm, by = "edgeID", all = TRUE) #attach traffic_calm info on the edges
 
 saveRDS(osm, paste0("../bigdata/Greenness/Canopy/",regions[a],"/crossings_streetlgts.Rds"))
