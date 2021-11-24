@@ -47,4 +47,6 @@ osm <- merge(osm, osm_crime, by = "edgeID", all = TRUE) #attach crime counts inf
 
 osm$crim_cnt <- ifelse(is.na(osm$crim_cnt), as.numeric(0), osm$crim_cnt)
 
-saveRDS(osm, paste0("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
+#save for next stages
+saveRDS(osm, paste0("../bigdata/network-clean/",region_nm,"/network_edges.Rds"))
+rm(osm)
