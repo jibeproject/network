@@ -178,4 +178,4 @@ osm <- merge(osm, osm_traffic_calm, by = "edgeID", all = TRUE) #attach traffic_c
 osm$structure <- ifelse(is.na(osm$structure), as.character("no"), osm$structure)
 colnames(osm)[colnames(osm) == "structure"] <- "traf_calm_ftr"
 
-saveRDS(osm, paste0("../bigdata/Greenness/Canopy/",regions[a],"/crossings_streetlgts.Rds"))
+saveRDS(osm, paste0("../bigdata/Greenness/Canopy/",regions[a],"/crossings_streetlgts_trafcalm.Rds"))
