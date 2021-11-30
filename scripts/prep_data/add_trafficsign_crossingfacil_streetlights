@@ -179,5 +179,5 @@ osm$structure <- ifelse(is.na(osm$structure), as.character("no"), osm$structure)
 colnames(osm)[colnames(osm) == "structure"] <- "traf_calm_ftr"
 
 #save for next stages
-saveRDS(osm, paste0("../bigdata/Greenness/Canopy/",region_nm,"/crossings_streetlgts_trafcalm.Rds"))
+saveRDS(osm, paste0("../bigdata/network-clean/",region_nm,"/crossings_streetlgts_trafcalm.Rds"))
 rm(osm)
