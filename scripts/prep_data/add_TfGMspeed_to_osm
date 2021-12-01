@@ -76,9 +76,9 @@ osm_speed <- osm_speed %>% group_by(edgeID) %>% mutate(speedKPH=mean(speedKPH)) 
 osm_speed <- distinct(osm_speed)
 osm <- merge(osm, osm_speed, by = "edgeID", all = TRUE) #attach speedKPH info on the edges
 
-#Impute using missForest function for the variables in columns 2 to 5, where 2=maxspeed, 3=averageWidth.imp, 4=averageaadt.imp and 5=speedKPH
-osm_imp <- osm %>% select(edgeID, maxspeed, averageWidth.imp, averageaadt.imp, speedKPH) %>% st_drop_geometry() %>% as.data.frame()
-osm_imp[,2:5] <- missForest(osm_imp)$ximp[,2:5]
+#Impute using missForest function for the variables in columns 2 to 5, where 2=maxspeed, 3=averageWidth.imp and 4=speedKPH
+osm_imp <- osm %>% select(edgeID, maxspeed, averageWidth.imp, speedKPH) %>% st_drop_geometry() %>% as.data.frame()
+osm_imp[,2:4] <- missForest(osm_imp)$ximp[,2:4]
 
 osm <- osm %>% select(-speedKPH) #remove speedKPH with missing values
 osm <- merge(osm, osm_imp[,c("edgeID", "speedKPH")], by = "edgeID", all = TRUE) #attach speedKPH after imputation back on the edges
