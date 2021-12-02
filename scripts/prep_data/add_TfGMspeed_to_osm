@@ -9,6 +9,7 @@ if (!require("readxl")) install.packages("readxl")
 if (!require("qgisprocess")) install.packages("qgisprocess")
 install.packages("qgisprocess", dependencies = TRUE)
 if (!require("missForest")) install.packages("missForest")
+if (!require("doParallel")) install.packages("doParallel") 
 
 help <- qgis_algorithms()
 qgis_show_help("qgis:joinbylocationsummary")
@@ -78,7 +79,8 @@ osm <- merge(osm, osm_speed, by = "edgeID", all = TRUE) #attach speedKPH info on
 
 #Impute using missForest function for speedKPH using the variables-- 2=maxspeed, 3=averageWidth.imp and 4=speedKPH
 osm_imp <- osm %>% select(edgeID, maxspeed, averageWidth.imp, speedKPH) %>% st_drop_geometry() %>% as.data.frame()
-osm_imp[,2:4] <- missForest(osm_imp)$ximp[,2:4]
+doParallel::registerDoParallel(cores = 4)
+osm_imp[,2:4] <- missForest(osm_imp, parallelize = 'forests')$ximp[,2:4]
 
 osm <- osm %>% select(-speedKPH) #remove speedKPH with missing values
 osm <- merge(osm, osm_imp[,c("edgeID", "speedKPH")], by = "edgeID", all = TRUE) #attach speedKPH after imputation back on the edges
