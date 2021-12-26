@@ -99,7 +99,7 @@ for(a in 1:length(regions)){
 
       #Impute the missing width information using other veriables using random forest algorithom
       jointranfermissing.impu <- jointranfer %>%
-        select(edgeID, roadtype, maxspeed, sidewalk, onewaysummary, averageWidth_median) %>%
+        dplyr::select(edgeID, roadtype, maxspeed, sidewalk, onewaysummary, averageWidth_median) %>%
         mutate(sidewalk_num = case_when(
           sidewalk == 'left'  ~ 1,
           sidewalk == 'right'  ~ 1,
@@ -119,7 +119,7 @@ for(a in 1:length(regions)){
           roadtype == 'Segregated Shared Path' ~ 11, roadtype == 'Shared Path' ~ 12,roadtype == 'Special Road - Cycling Forbidden' ~ 13,
           roadtype == 'Trunk Road - Cycling Allowed' ~ 14, roadtype == 'Trunk Road Link - Cycling Allowed' ~ 15
         )) %>%
-        select(edgeID, maxspeed, sidewalk_num, onewaysummary_num, roadtype_num, averageWidth_median) %>%
+        dplyr::select(edgeID, maxspeed, sidewalk_num, onewaysummary_num, roadtype_num, averageWidth_median) %>%
         st_drop_geometry() %>%
         as.data.frame()
 
@@ -128,7 +128,7 @@ for(a in 1:length(regions)){
 
       #drop a lot of variables, and rename the wdith variable to make sure we are clear about the imputation result
       jointranfermissing.impu <- jointranfermissing.impu %>%
-        select(edgeID, averageWidth_median) %>%
+        dplyr::select(edgeID, averageWidth_median) %>%
         rename (averageWidth.imp = averageWidth_median)
 
       jointranfermissing_imp_add <- left_join(jointranfer,jointranfermissing.impu, by = 'edgeID')

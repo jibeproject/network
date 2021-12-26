@@ -16,7 +16,7 @@ skip <- F #Should the code skip regions that have already been done?
 overwrite <- TRUE #Some stages overwrite existing files, for example by adding an extra column of data
                    #Note that not overwriting may cause later stages to fail if they expect earlier stages
                    #results to be in the starting file
-ncores <- 7 #Some functions use parallel processing how many clusters should be run?
+ncores <- 3 #Some functions use parallel processing how many clusters should be run?
 verbose <- TRUE #Get extra messages and information
 all.regions <- F #Ignore the regions to do file and do all regions
 
@@ -35,13 +35,18 @@ library(tidygraph)
 library(tidyverse)
 library(missForest)
 library(tmap)
-library(raster)
+#library(raster)
+library(terra)
 library(qgisprocess)
 qgis_configure()
 
 #some other functions
 #source("R/functions.R")
 #tmap_mode("view")
+
+#Some installation from GitHub
+#remotes::install_github("itsleeds/slopes")
+remotes::install_git("https://github.com/STBrinkmann/GVI") #in not installed
 
 #########################################
 
@@ -88,9 +93,6 @@ source("scripts/prep_data/estimate-slopes-to-OSM-JIBE-regions.R")
 source("scripts/prep_data/add-greenness-to-OSM.R")
 
 
-#Sept X: Adding AADT Data
-source("scripts/prep_data/join-AADT-OSM-JIBE-regions.R")
-
 
 #Step X: Add POIs
 
@@ -101,6 +103,13 @@ source("scripts/prep_data/join-AADT-OSM-JIBE-regions.R")
 #Step XX: If additional cycle infrastructure data available from local authority, add that to OSM network.
 #At present only available for Greater Manchester. So this code block should only run for GM.
 #For other areas skip this script
+
+#Sept X: Adding AADT Data
+source("scripts/prep_data/join-AADT-OSM-JIBE-regions.R")
+
+#Step x: Adding Speed Data
+
+#Step x: Adding cycle infa data
 source("scripts/prep_data/add_cyclinginfra_JIBE_GreaterManchester.R")
 
 

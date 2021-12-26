@@ -82,7 +82,7 @@ download.region <- function(a){
   lines <- rbind(lines,lines.loops)
   rm(lines.loops)
 
-  #CHange to British National Grid
+  #Change to British National Grid
   lines <- st_transform(lines, 27700)
   points <- st_transform(points, 27700)
   region_shp <- st_transform(region_shp, 27700)
@@ -231,7 +231,7 @@ if(skip){
 
 
 nCores <- detectCores(logical = FALSE)
-ncores <-detectCores() - 4
+ncores <- detectCores() - 1
 
 
 if(nrow(bounds) > 0){

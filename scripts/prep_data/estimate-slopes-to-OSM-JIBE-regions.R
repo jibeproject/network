@@ -32,11 +32,13 @@ for(a in 1:length(regions)){
 
       osm <- readRDS(paste0("../bigdata/osm-mastermap-width/",regions[a],"/osm_mmap_width.Rds"))
 
-      dtm <- rast (paste0("../bigdata/dem/",regions[a],"/CR_DEM.tif"))
+      dtm <- terra::rast (paste0("../bigdata/dem/",regions[a],"/CR_DEM.tif"))
 
       osm$slope = slope_raster (osm, dem = dtm)
 
       saveRDS(osm,paste0("../bigdata/osm-slops-DEM/",regions[a],"/osm_slope.Rds"))
+      
+      #st_write (osm,paste0("../bigdata/osm-slops-DEM/",regions[a],"/osm_slope.gpkg"))
 
     }
 
