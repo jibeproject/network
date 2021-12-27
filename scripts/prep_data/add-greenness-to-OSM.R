@@ -224,9 +224,3 @@ for(a in 1:length(regions)){
 #st_write(osm_canopy_added,paste0("../bigdata/osm-greenness/",regions[a],"/osm_canopy_added.gpkg"))
 
 
-observer <- st_sf(sf_point(c(384448.8,397578.7)), crs = st_crs(27700))
-
-viewshed1 <- viewshed(observer = observer, dsm_rast = DSM, dtm_rast = DEM,
-                      max_distance = 200, observer_height = 1.7, plot = TRUE)
-
-
