@@ -4,7 +4,8 @@
 #remotes::install_git("https://github.com/STBrinkmann/GVI") #in not installed
 library(GVI)
 library(terra)
-library(multidplyr)
+library(sfheaders)
+#library(multidplyr)
 
 #Main code
 regions <- regions.todo
@@ -131,11 +132,12 @@ for(a in 1:length(regions)){
     
     
     #Input greenness and DEM data
-    DSM <- rast(paste0("../bigdata/dem/",regions[a],"/CR_DSM.tif"))
+    DSM <- rast(paste0("../bigdata/dem/",regions[a],"/CR_DSMextended.tif"))
     
-    DEM <- rast(paste0("../bigdata/dem/",regions[a],"/CR_DEM.tif"))
+    DEM <- rast(paste0("../bigdata/dem/",regions[a],"/CR_DEM_F.tif"))
     
-    GreenSpace <- rast(paste0("../bigdata/Greenness/GreenNoGreen/",regions[a],"/GreenNoGreen.tif"))
+    
+    GreenSpace <- rast(paste0("../bigdata/Greenness/GreenNoGreen/",regions[a],"/GreenNoGreenRes.tif"))
     
     #osm <- readRDS(paste0("../bigdata/osm-slops-DEM/",regions[a],"/osm_slope.Rds"))
     
@@ -154,18 +156,34 @@ for(a in 1:length(regions)){
     #convert the temporary point samples to sf object
     pointsonedge_sf <- sf::read_sf(qgis_output(pointsonedge, "OUTPUT"))
     
+    #pointsonedge_sf_smaple <- sample_n (pointsonedge_sf, 100)
+    
     #point_VGVIs <- vgvi_from_sf(observer = pointsonedge_sf,
                           #dsm_rast = DSM, dtm_rast = DTM, greenspace_rast = Green,
                           #max_distance = 50, observer_height = 1.7,
                           #m = 1, b = 3, mode = "exponential", cores = 3, progress = T)
     
-    point_VGVIs <- vgvi_from_sf(observer = pointsonedge_sf,
+    pVGVI <- vgvi_from_sf(observer = pointsonedge_sf,
                  dsm_rast = DSM, dtm_rast = DEM, greenspace_rast = GreenSpace,
-                 max_distance = 50, observer_height = 1.7,
-                 m = 0.5, b = 8, mode = "logit", cores = 3, progress = T)$VGVI
+                 max_distance = 300, observer_height = 1.7,
+                 m = 0.5, b = 8, mode = "logit", cores = 3, progress = T)
+    
+    
+    pVGVIbuffer <- st_buffer(pVGVI, dist = 0.05)
+    
+    joinVGVIlines <- qgis_run_algorithm(
+      "qgis:joinbylocationsummary",
+      DISCARD_NONMATCHING = F,
+      INPUT = osm,
+      JOIN = pVGVIbuffer,
+      SUMMARIES = "mean", # 10 is for majority, 7 for median
+      JOIN_FIELDS = 'VGVI' #the column to join the attribute
+    )
+    
+    joinVGVIlines_sf <- sf::read_sf(qgis_output(joinVGVIlines, "OUTPUT"))
     
 
-    saveRDS(osm_canopy_added,paste0("../bigdata/osm-greenness/",regions[a],"/osm_greenness.Rds"))
+    saveRDS(joinVGVIlines_sf,paste0("../bigdata/osm-greenness/",regions[a],"/osm_greenness.Rds"))
 
   }
   else{
@@ -188,5 +206,9 @@ for(a in 1:length(regions)){
 #st_write(osm_canopy_added,paste0("../bigdata/osm-greenness/",regions[a],"/osm_canopy_added.gpkg"))
 
 
-observer <- st_sf(sf_point(c(492243.3, 5454231.4)), crs = st_crs(27700))
+observer <- st_sf(sf_point(c(384448.8,397578.7)), crs = st_crs(27700))
+
+viewshed1 <- viewshed(observer = observer, dsm_rast = DSM, dtm_rast = DEM,
+                      max_distance = 200, observer_height = 1.7, plot = TRUE)
+
 
