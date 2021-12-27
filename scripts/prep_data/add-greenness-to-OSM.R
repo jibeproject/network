@@ -64,8 +64,10 @@ for(a in 1:length(regions)){
       #NDVIzonal <- terra::extract (NDVI, osmBuffer, fun=mean, na.rm=TRUE)
 
       NDVIzonal_df <- NDVIzonal_sf %>% dplyr::select (edgeID, NDVImean) %>% st_drop_geometry() %>% as.data.frame()
+      
+      rm (NDVI, NDVIzonal_df, NDVIzonal_sf, NDVIzonal)
 
-      osm_Greenness_added <- left_join(osm,NDVIzonal_df, by = 'edgeID')
+      osm <- left_join(osm,NDVIzonal_df, by = 'edgeID')
 
     }
 
@@ -112,9 +114,11 @@ for(a in 1:length(regions)){
     #             buffer_area = unique(area),
     #             canopycoverage = (canopysum /buffer_area) * 100)
 
-    osm_Greenness_added <- left_join(osm_Greenness_added, canopy_coverage_osm, by = 'edgeID')
+    osm <- left_join(osm, canopy_coverage_osm, by = 'edgeID')
+    
+    rm(canopy, canopycentroid, canopy_join_osm, canopy_join_osm_sf, canopy_coverage_osm)
 
-    saveRDS(osm_Greenness_added,paste0("../bigdata/osm-greenness/",regions[a],"/osm_greenness.Rds"))
+    #saveRDS(osm_Greenness_added, paste0("../bigdata/osm-greenness/",regions[a],"/osm_greenness.Rds"))
 
     }
     else{
@@ -129,20 +133,19 @@ for(a in 1:length(regions)){
     #Check for input file
 
     message(paste0(Sys.time(), ": Estimating Greenness Visibility for each link of OSM for ",regions[a]))
-    
-    
+
+
     #Input greenness and DEM data
     DSM <- rast(paste0("../bigdata/dem/",regions[a],"/CR_DSMextended.tif"))
-    
+
     DEM <- rast(paste0("../bigdata/dem/",regions[a],"/CR_DEM_F.tif"))
-    
-    
+
     GreenSpace <- rast(paste0("../bigdata/Greenness/GreenNoGreen/",regions[a],"/GreenNoGreenRes.tif"))
-    
+
     #osm <- readRDS(paste0("../bigdata/osm-slops-DEM/",regions[a],"/osm_slope.Rds"))
-    
+
     #pointsonedge <- st_line_sample (osm_Greenness_added,density = 1/20, n = 1, type = "regular", sample = NULL) #each 20m, at least 1 point
-    
+
     #Take point sample on master map at certain distance and start/end offset
     pointsonedge <- qgis_run_algorithm(
       "native:pointsalonglines",
@@ -155,22 +158,28 @@ for(a in 1:length(regions)){
 
     #convert the temporary point samples to sf object
     pointsonedge_sf <- sf::read_sf(qgis_output(pointsonedge, "OUTPUT"))
-    
+
+    #test using sample points
     #pointsonedge_sf_smaple <- sample_n (pointsonedge_sf, 100)
-    
+
     #point_VGVIs <- vgvi_from_sf(observer = pointsonedge_sf,
                           #dsm_rast = DSM, dtm_rast = DTM, greenspace_rast = Green,
                           #max_distance = 50, observer_height = 1.7,
                           #m = 1, b = 3, mode = "exponential", cores = 3, progress = T)
-    
+
     pVGVI <- vgvi_from_sf(observer = pointsonedge_sf,
                  dsm_rast = DSM, dtm_rast = DEM, greenspace_rast = GreenSpace,
                  max_distance = 300, observer_height = 1.7,
                  m = 0.5, b = 8, mode = "logit", cores = 3, progress = T)
+
+    #st_write (pVGVI,"pointsVGVI300m.gpkg")
     
+    rm (DEM, DSM, Greenspace, pointsonedge, pointsonedge_sf)
+
+    pVGVIbuffer <- st_buffer(pVGVI, dist = 0.5)
     
-    pVGVIbuffer <- st_buffer(pVGVI, dist = 0.05)
-    
+    rm (pVGVI)
+
     joinVGVIlines <- qgis_run_algorithm(
       "qgis:joinbylocationsummary",
       DISCARD_NONMATCHING = F,
@@ -179,16 +188,25 @@ for(a in 1:length(regions)){
       SUMMARIES = "mean", # 10 is for majority, 7 for median
       JOIN_FIELDS = 'VGVI' #the column to join the attribute
     )
-    
+
     joinVGVIlines_sf <- sf::read_sf(qgis_output(joinVGVIlines, "OUTPUT"))
     
+    joinVGVIlines_sf_osm <- joinVGVIlines_sf %>%
+      st_drop_geometry() %>%
+      dplyr::select(edgeID, VGVI_mean)
+    
+    osm <- left_join(osm, joinVGVIlines_sf_osm, by = 'edgeID')
 
-    saveRDS(joinVGVIlines_sf,paste0("../bigdata/osm-greenness/",regions[a],"/osm_greenness.Rds"))
+    saveRDS(osm,paste0("../bigdata/osm-greenness/",regions[a],"/osm_greenness.Rds"))
+    
+    st_write(osm,paste0("../bigdata/osm-greenness/",regions[a],"/osm_greenness.gpkg"))
+    
+    rm (joinVGVIlines, joinVGVIlines_sf, joinVGVIlines_sf_osm, pVGVIbuffer)
 
   }
   else{
 
-    message(paste0(Sys.time(), ": Canopy data is not available for ",regions[a]))
+    message(paste0(Sys.time(), ": Evey level data is not available for ",regions[a]))
 
   }
 
