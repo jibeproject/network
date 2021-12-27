@@ -35,7 +35,7 @@ library(tidygraph)
 library(tidyverse)
 library(missForest)
 library(tmap)
-#library(raster)
+library(raster)
 library(terra)
 library(qgisprocess)
 qgis_configure()
@@ -46,7 +46,8 @@ qgis_configure()
 
 #Some installation from GitHub
 #remotes::install_github("itsleeds/slopes")
-remotes::install_git("https://github.com/STBrinkmann/GVI") #in not installed
+#remotes::install_git("https://github.com/STBrinkmann/GVI", upgrade = TRUE)#in not installed
+#remotes::install_github("paleolimbot/qgisprocess")
 
 #########################################
 
