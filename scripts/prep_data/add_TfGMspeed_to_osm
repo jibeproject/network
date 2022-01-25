@@ -9,7 +9,7 @@ if (!require("readxl")) install.packages("readxl")
 if (!require("qgisprocess")) install.packages("qgisprocess")
 install.packages("qgisprocess", dependencies = TRUE)
 if (!require("missForest")) install.packages("missForest")
-if (!require("doParallel")) install.packages("doParallel") 
+if (!require("doParallel")) install.packages("doParallel")
 
 help <- qgis_algorithms()
 qgis_show_help("qgis:joinbylocationsummary")
@@ -76,6 +76,16 @@ osm_speed <- st_intersection(osm[,"edgeID"], snapbuffer[,"speedKPH"]) %>% st_dro
 osm_speed <- osm_speed %>% group_by(edgeID) %>% mutate(speedKPH=mean(speedKPH)) %>% ungroup()
 osm_speed <- distinct(osm_speed)
 osm <- merge(osm, osm_speed, by = "edgeID", all = TRUE) #attach speedKPH info on the edges
+
+#################
+# PART 3: imputing missing data
+#################
+#run a test to check the missing values in attributes on the network
+per_miss <- function(x) {sum(is.na(x))/length(x)*100}
+apply(osm, 2, per_miss)
+
+#RESULT: aadt_all_median -- 64.85% of the observations are missing data
+#RESULT: speedKPH -- 83.75% of the observations are missing data
 
 #Impute using missForest function for speedKPH using the variables-- 2=maxspeed, 3=averageWidth.imp and 4=speedKPH
 osm_imp <- osm %>% select(edgeID, maxspeed, averageWidth.imp, speedKPH) %>% st_drop_geometry() %>% as.data.frame()
