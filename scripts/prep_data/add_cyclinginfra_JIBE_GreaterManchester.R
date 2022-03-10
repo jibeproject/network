@@ -13,11 +13,11 @@
 #RouteSurface: 0 (NA) - 1 (unpaved/mountain biking) - 2 (unpaved/muddy when rain) - 3 (all-weather)
 #NCNRoute: 1 (not part) - 2 (route part of the National NCN) - 3 (route part of the Regional)
 # JIBE
-#4 = off road path;
-#3 = protected lane/ segregated lanes;
-#2 = painted lanes;
-#1 = Integrated lanes
-#0 = Cycling link but have to walk (Tfgm 9)
+#4 (offroad) = off road path;
+#3 (protected) = protected lane/ segregated lanes;
+#2 (painted) = painted lanes;
+#1 (integrated) = Integrated lanes
+#0 (dismount) = Cycling link but have to walk (Tfgm 9)
 #TfGM
 # 2 = on-road Advisory Routes*. Routes along roads with directions signs as minimum level of infrastructure. a.k.a. recommended signed routes
 # 3 = on-road routes with cycling facilities, e.g. cycle lanes and / or advanced stop lines at signals
@@ -34,12 +34,12 @@
 #####################
 #PART 1: synchronize TfGM cycling infrastructure to JIBE categories
 #####################
-# JIBE                                            #TfGM
-#4 = off road path;                               5; 6; 7
-#3 = protected lane/ segregated lanes;            4; 11
-#2 = painted lanes;                               3
-#1 = Integrated lanes                             2
-#0 = Cycling link but have to walk (Tfgm 9)       9
+# JIBE                                                      #TfGM
+#4 (offroad) = off road path;                               5; 6; 7
+#3 (protected) = protected lane/ segregated lanes;          4; 11
+#2 (painted) = painted lanes;                               3
+#1 (integrated) = Integrated lanes                          2
+#0 (dismount) = Cycling link but have to walk (Tfgm 9)      9
 
 #read-in networks data
 #osm <- st_read(file.path("01_DataInput/Network/GreaterManchester/network-addedinfo.geojson"))
@@ -120,12 +120,12 @@ osmcycle_sf <- osmcycle_sf %>%
 osmcycle_sf <- osmcycle_sf %>% dplyr::mutate(cycleinfra = ifelse(!is.na(RouteType_majority), RouteType_majority, cycleosm))
 
 #adding OSM cycling infra to complement TfGM Cycling Infra
-# JIBE                                        |  #osm$bicycle         |  #osm$roadtype                    |   #osm$cycleway.left/OSM$cycleway.right   | #osm$highway
-#4 = off road path;                           | "designated"          |  "Segregated Cycleway"/"Cycleway" |   "track"                                 |
-#3 = protected lane/ segregated lanes;        |                       | "Segregated Shared Path"          |                                           | "cycleway"/"footway"/"path"
-#2 = painted lanes;                           |  "yes"                |  "Segregated Cycleway"/"Cycleway" |                                           | "cycleway"
-#1 = Integrated lanes                         |                       |  "Shared Path"                    |   "share_busway"  "lane"                  |  "path"
-#0 = Cycling link but have to walk (Tfgm 9)   |                       |                                   |                                           |
+# JIBE                                                  |  #osm$bicycle         |  #osm$roadtype                    |   #osm$cycleway.left/OSM$cycleway.right   | #osm$highway
+#4 (offroad) = off road path;                           | "designated"          |  "Segregated Cycleway"/"Cycleway" |   "track"                                 |
+#3 (protected)= protected lane/ segregated lanes;       |                       | "Segregated Shared Path"          |                                           | "cycleway"/"footway"/"path"
+#2 (painted) = painted lanes;                           |  "yes"                |  "Segregated Cycleway"/"Cycleway" |                                           | "cycleway"
+#1 (integrated)= Integrated lanes                       |                       |  "Shared Path"                    |   "share_busway"  "lane"                  |  "path"
+#0 (dismount)= Cycling link but have to walk (Tfgm 9)   |                       |                                   |                                           |
 
 osmcycle_sf <- osmcycle_sf %>%
       dplyr::mutate(cycleosm = ifelse(stringr::str_detect(bicycle, "designated") == TRUE & stringr::str_detect(roadtyp, "Cycleway") == TRUE, as.numeric(4), cycleosm)) %>%
@@ -143,6 +143,7 @@ osmcycle_sf <- osmcycle_sf %>%
       dplyr::mutate(cycleosm = ifelse(stringr::str_detect(highway, "cycleway") == TRUE & stringr::str_detect(roadtyp, "Cycleway") == TRUE, as.numeric(2), cycleosm)) %>%
       dplyr::mutate(cycleosm = ifelse(!is.na(cycleinfra), cycleinfra, cycleosm))%>%
       select(-c(cycleinfra, RouteType_majority))
+
 
 #save for next stages
 saveRDS(osmcycle_sf, paste0("../bigdata/network-addedinfo/","GreaterManchester","/network_added_edges.Rds"))
