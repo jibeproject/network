@@ -155,7 +155,7 @@ st_write(osmcycle_sf, paste0("../bigdata/network-addedinfo/","GreaterManchester"
 rm (osm, cycle, cycle_points, snap, snap_sf, snapbuffer, joininfo, osmcycle_sf)
 
 #####################
-#PART 2.2: linking networks info (done for the remaining 10 city regions using OSM 'roadtype' and 'bicycle' attributes)
+#PART 2.2: linking networks info (done for the remaining 10 city regions using OSM 'highway' 'cycleway' 'roadtype' and 'bicycle' tags)
 #####################
 osm <- osm %>%
       dplyr::mutate(cycleosm = ifelse(stringr::str_detect(bicycle, "designated") == TRUE & stringr::str_detect(roadtyp, "Cycleway") == TRUE, as.numeric(4), cycleosm)) %>%
