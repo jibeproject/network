@@ -71,7 +71,7 @@ snap <- qgis_run_algorithm(
 snap_sf <- sf::read_sf(qgis_output(snap, "OUTPUT"))
 snapbuffer <- st_buffer(snap_sf, dist = 0.05)
 
-#add traffic_calm info to edges
+#add speed info to edges
 osm_speed <- st_intersection(osm[,"edgeID"], snapbuffer[,"speedKPH"]) %>% st_drop_geometry() #get edgeIDs for gm_mastermap pnt
 osm_speed <- osm_speed %>% group_by(edgeID) %>% mutate(speedKPH=mean(speedKPH)) %>% ungroup()
 osm_speed <- distinct(osm_speed)
