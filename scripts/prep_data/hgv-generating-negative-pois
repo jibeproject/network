@@ -108,8 +108,8 @@ neg_hgv_count_edgeid <- aggregate(. ~ edgeID, data=neg_hgv_count_edgeid[,c("edge
 
 #remove unnecessary objects from environment
 rm(neg_hgv_osm_join, gm_poi_negativefreight_resex, int_res, gm_poi_negativefreight, gm_geom_build_res, gm_geom_build, gm_poi)
-rm(geom_build, negative_freight_wgt, poi_negativefreight_codes, poi_all, gm_bound) 
+rm(geom_build, negative_freight_wgt, poi_negativefreight_codes, poi_all, gm_bound)
 
-#bring negative freight count to osm network
+#bring negative freight score to osm network
 osm <- merge(osm, neg_hgv_count_edgeid, by = "edgeID", all.x = TRUE)
 osm <- osm[,c(1:41, 64:65, 42:63)] #rearange columns to match documentation order
