@@ -59,29 +59,34 @@ crossings_final_crossing <- edges_trafficsignal %>% group_by(edgeID) %>% summari
 #join to nodes
 nodes_crossingpnts <- st_intersection(nodes[,"nodeID"], edges_crossingpnts_nosign[,"Object_Ref"]) %>% st_drop_geometry()
 colnames(nodes_crossingpnts)[2] <- "peds_zebra"
+#get unique crossings
 nodes_crossingpnts <- unique(nodes_crossingpnts)
 
 ##############
-#JOIN CROSSING POINTS AND TRAFFIC SIGN
+#JOIN CROSSING POINTS AND TRAFFIC SIGNALS
 ##############
 
-#join traffic with crossing for edges
+#join traffic signals with crossing for edges
 crossings_final <- merge(crossings_final_type, crossings_final_crossing, by = "edgeID", all = TRUE)
 crossings_final <- merge(crossings_final, edges_crossingpnts_nosign, by = "edgeID", all = TRUE) %>% ungroup()
 crossings_final$signal_cnt <- ifelse(is.na(crossings_final$signal_cnt), as.numeric(0), crossings_final$signal_cnt)
 crossings_final$n <- ifelse(is.na(crossings_final$n), as.numeric(0), crossings_final$n)
 
+#tally crossings
 crossings_final$cros_cnt <- rowSums(crossings_final[,c("signal_cnt", "n")])
 crossings_final$crossingtype <- ifelse(is.na(crossings_final$crossingtype) | stringr::str_detect(crossings_final$crossingtype, "NA") == TRUE, crossings_final$Object_Ref, crossings_final$crossingtype)
 crossings_final <- crossings_final %>% select(-c("Object_Ref", "signal_cnt", "n"))
 
+#remove duplicates
 #crossings_final <- crossings_final[unique(crossings_final$edgeID),]
+#sense-check remaining duplicates
 #crossings_final[duplicated(crossings_final$edgeID),]
 
 #join traffic with crossing for nodes
 nodes <- merge(nodes, nodes_trafficsignal, by = "nodeID", all.x = TRUE)
 nodes <- merge(nodes, nodes_crossingpnts, by = "nodeID", all = TRUE)
 
+#count crossings and signals on network nodes
 nodes <- nodes %>% mutate(ped_cros = coalesce(peds_signal, peds_zebra)) %>% select(-c(peds_signal, peds_zebra))
 st_write(nodes, file.path(paste0("02_DataOutput/network/gm/nodes/network_nodes_z.gpkg")), "network_nodes_z", driver="GPKG") #write for visual inspection in QGIS
 
@@ -110,7 +115,7 @@ nodes <- merge(nodes, nodes_trafsig, by = "nodeID", all =TRUE)
 colnames(nodes)[4] <- "trafsign"
 
 #write for visual check
-st_write(com_buf, file.path(paste0("02_DataOutput/network/gm/nodes/com_buf.gpkg")), "com_buf", driver="GPKG") #write for visual inspection in QGIS
+st_write(com_buf, file.path(paste0("02_DataOutput/network/gm/nodes/com_buf.gpkg")), "com_buf", driver="GPKG")
 
 ##############
 #PARALLEL (zebra peds+cyc)
@@ -121,32 +126,39 @@ crossingparallel_buf <- st_buffer(crossingparallel, 20)
 nodes_cross <- st_intersection(nodes[,"nodeID"], crossingparallel_buf[,"Object_Ref"]) %>% st_drop_geometry()
 nodes <- merge(nodes, nodes_cross, by = "nodeID", all =TRUE)
 
+#count crossings and signals on network nodes
 nodes <- nodes %>% mutate(cyc_cros = coalesce(trafsign, Object_Ref))
 nodes <- nodes[,c("nodeID", "z_coor", "ped_cros", "cyc_cros")]
 
 ##############
 #PART 2: Get cycleway crossings from osm tag 'highway:cycleway'
 ##############
-#buffer signals
+#buffer signals to find edges tagged 'highway:cycleway' intersecting with Signal type
 signal_nul <- trafficsignal_buf[trafficsignal_buf$Type %like% "Signal" == TRUE & is.na(trafficsignal_buf$Crossing_F) == TRUE, ]
 signal_nul_buf <- st_buffer(signal_nul, 50)
 
-#read in pre-clipped network segments for highway:cycleway in traffic signal buffer
+#read in QGIS pre-clipped network segments (using JoinAttributesByLocation 'intersects') tagged 'highway:cycleway' intersecting with Signal buffer
 osm_cycleway_cros <- st_read(file.path("01_DataInput/TrafficSignal/SHP-format/osm_cycleway_crossings.shp"))
+
 #find network nodes on the cycleway crossing edges
 cyc_sign_cros <- st_intersection(osm_cycleway_cros[, c("edgeID", "highway")], nodes[,c("nodeID")])
 cyc_sign_cros <- st_intersection(cyc_sign_cros[,c("nodeID")], signal_nul_buf[,c("Type")])
 cyc_sign_cros <- unique(cyc_sign_cros) %>% st_drop_geometry()
 
+#clean duplicated
 row <- c("325.1","326.1.1")
 cyc_sign_cros <- cyc_sign_cros[!(row.names(cyc_sign_cros) %in% row),]
 
+#merge cycle crossings Signal type to network nodes
 nodes <- merge(nodes, cyc_sign_cros, by = "nodeID", all =TRUE)
 
+#count cycle crossings
 nodes <- nodes %>% mutate(cyc_cros = coalesce(cyc_cros, Type))
 nodes <- nodes[,c("nodeID", "z_coor", "ped_cros", "cyc_cros")]
 
+#sense-check
 levels(as.factor(nodes$ped_cros))
 levels(as.factor(nodes$cyc_cros))
 
+#write final network nodes file
 st_write(nodes, file.path(paste0("02_DataOutput/network/gm/nodes/network_nodes_z.gpkg")), "network_nodes_z", driver="GPKG") #write for visual inspection in QGIS
