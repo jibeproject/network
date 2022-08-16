@@ -22,9 +22,14 @@ crossingpnts <- crossingpnts[crossingpnts$Status == "Existing", ] #keep only exi
 
 #read traffic signals
 trafficsignal <- st_read(file.path("01_DataInput/TrafficSignal/SHP-format/TrafficSignals.shp"))
-trafficsignal_buf <- st_buffer(trafficsignal, 20) #buffer existing TrafficSignals locations to remove crossing points in close proximity-- avoid double counting
+
+#buffer existing TrafficSignals locations to remove crossing points in close proximity-- avoid double counting
+trafficsignal_buf <- st_buffer(trafficsignal, 20)
 crossingpnts_nosign <- st_intersection(crossingpnts, trafficsignal_buf)
-crossingpnts_nosign <- crossingpnts[!crossingpnts$geometry %in% crossingpnts_nosign$geometry, ] #keep only points not in TrafficSignals dataset
+
+#keep only crossing points not in TrafficSignals dataset
+crossingpnts_nosign <- crossingpnts[!crossingpnts$geometry %in% crossingpnts_nosign$geometry, ]
+#buffer crossing points excluding crossings already in TrafficSignals
 crossingpnts_nosign_buf <- st_buffer(crossingpnts_nosign, 20)
 
 ####################
@@ -35,17 +40,25 @@ crossingpnts_nosign_buf <- st_buffer(crossingpnts_nosign, 20)
 ##############
 #join to edges
 edges_trafficsignal <- edges[,c("edgeID", "highway")]
+
+#remove motorways (to avoind spatial join error)
 edges_trafficsignal <- edges_trafficsignal[edges_trafficsignal$highway != "motorway" & edges_trafficsignal$highway != "motorway_link", ]
 edges_trafficsignal <- st_intersection(edges_trafficsignal, trafficsignal_buf[,c(3,26)]) %>% st_drop_geometry() %>% select(-highway) #get edgeIDs for trafficsig based
+
+#exclude emergency Traffic Signals (for Fire Brigades)
 edges_trafficsignal<- edges_trafficsignal[edges_trafficsignal$Type != "Wig Wag", ]
+
+#count TrafficSignals of edges
 edges_trafficsignal <- edges_trafficsignal %>% group_by(edgeID, Type, Crossing_F) %>% tally() %>% ungroup()
 
 #join to nodes
 nodes_trafficsignal <- st_intersection(nodes, edges_trafficsignal)
 nodes_trafficsignal <- nodes_trafficsignal[,c("nodeID", "Type")] %>% st_drop_geometry() #get edgeIDs for trafficsig based
 colnames(nodes_trafficsignal)[2] <- "peds_signal"
+
 #get unique nodes
 nodes_trafficsignal <- unique(nodes_trafficsignal$nodeID)
+
 #find duplicated and remove
 nodes_trafficsignal[duplicated(nodes_trafficsignal$nodeID) == TRUE, ]
 row_dup <- c("173260.1")
@@ -57,8 +70,12 @@ nodes_trafficsignal <- nodes_trafficsignal[!(row.names(nodes_trafficsignal) %in%
 #join to edges
 #crossing
 edges_crossingpnts_nosign <- edges[,c("edgeID", "highway")]
+
+#remove motorways (to avoid spatial join error)
 edges_crossingpnts_nosign <- edges_crossingpnts_nosign[edges_crossingpnts_nosign$highway != "motorway" & edges_crossingpnts_nosign$highway != "motorway_link", ]
-edges_crossingpnts_nosign <- st_intersection(edges_crossingpnts_nosign, crossingpnts_nosign_buf[,3]) %>% st_drop_geometry() %>% select(-highway)#get edgeIDs for crossing pnt
+
+#get edgeIDs for crossing pnt
+edges_crossingpnts_nosign <- st_intersection(edges_crossingpnts_nosign, crossingpnts_nosign_buf[,3]) %>% st_drop_geometry() %>% select(-highway)
 edges_crossingpnts_nosign <- edges_crossingpnts_nosign %>% group_by(edgeID, Object_Ref) %>% tally() %>% ungroup()
 
 #tally trafficsignal var 'type' and 'crossing facility' per edge-- multiple facilities per edge are merged
