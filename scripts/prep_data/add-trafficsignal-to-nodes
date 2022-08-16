@@ -10,6 +10,15 @@ qgis_show_help("native:snapgeometries")
 ####################
 #PART 1: get road network nodes, traffic signals and crossing facilities
 ###################
+#get network nodes
+nodes <- st_read(file.path("02_DataOutput/network/gm/nodes/superseded/network_nodes_z.gpkg"), drivers = "GPKG")
+
+#read network
+edges <- st_read(file.path("01_DataInput/Network/GreaterManchester/network_edges_v2.1.gpkg"), drivers = "GPKG")
+
+#read crossing points
+crossingpnts <- st_read(file.path("01_DataInput/Network/GM_cycle/BeeNetwork/SHP/CrossingPoints_point.shp"))
+crossingpnts <- crossingpnts[crossingpnts$Status == "Existing", ] #keep only existing
 
 #read traffic signals
 trafficsignal <- st_read(file.path("01_DataInput/TrafficSignal/SHP-format/TrafficSignals.shp"))
@@ -18,15 +27,6 @@ crossingpnts_nosign <- st_intersection(crossingpnts, trafficsignal_buf)
 crossingpnts_nosign <- crossingpnts[!crossingpnts$geometry %in% crossingpnts_nosign$geometry, ] #keep only points not in TrafficSignals dataset
 crossingpnts_nosign_buf <- st_buffer(crossingpnts_nosign, 20)
 
-#read crossing points
-crossingpnts <- st_read(file.path("01_DataInput/Network/GM_cycle/BeeNetwork/SHP/CrossingPoints_point.shp"))
-crossingpnts <- crossingpnts[crossingpnts$Status == "Existing", ] #keep only existing
-
-#get network nodes
-nodes <- st_read(file.path("02_DataOutput/network/gm/nodes/superseded/network_nodes_z.gpkg"), drivers = "GPKG")
-
-#read network
-edges <- st_read(file.path("01_DataInput/Network/GreaterManchester/network_edges_v2.1.gpkg"), drivers = "GPKG")
 ####################
 #PART 2: join PEDS traffic signals and crossing points
 ###################
