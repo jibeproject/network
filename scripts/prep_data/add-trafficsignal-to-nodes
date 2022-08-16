@@ -1,3 +1,12 @@
+#SET UP
+rm(list = ls())
+
+if (!require("sf")) install.packages("sf")
+if (!require("dplyr")) install.packages("dplyr")
+if (!require("qgisprocess")) install.packages("qgisprocess")
+install.packages("qgisprocess", dependencies = TRUE)
+qgis_show_help("native:snapgeometries")
+
 ####################
 #PART 1: get road network nodes, traffic signals and crossing facilities
 ###################
