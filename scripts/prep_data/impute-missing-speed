@@ -18,12 +18,12 @@ osm_gm <- st_intersection(osm, gm_bounds)
 per_miss <- function(x) {sum(is.na(x))/length(x)*100}
 apply(osm, 2, per_miss)
 
-#get dataframe for imputing: Imputations are generated according to the default method, which by default is predictive mean matching
+#get dataframe for imputing: Imputations are generated according to the default method, which is predictive mean matching
 #BEST predition for both high and low extremes
 osm_imp <- osm_gm %>% select(edgeID, highway, maxsped, aadt_md, speedKPH) %>% st_drop_geometry() %>% as.data.frame()
 osm_imp <- mice(osm_imp)
 
-#view first imputed complete table (output by default set to produce five prediction outputs-- either check which has list outliers of use the mean of all five)
+#view first imputed complete table (output by default set to produce five prediction outputs-- either check for  least outliers of use mean of all five)
 tibble::view(as.data.frame(complete(osm_imp,1)))
 
 #view fifth imputed complete table
