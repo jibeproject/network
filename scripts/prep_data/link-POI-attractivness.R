@@ -155,7 +155,7 @@ saveRDS(osm,paste0("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
 #PART 4: get POI count and diversity (SKIP FOR NOW)
 ####################
 #get count and proportion
-clustered_pois <- join %>% group_by(osm_id, pointx_class) %>% tally() %>% ungroup()
+clustered_pois <- join_highstr %>% group_by(osm_id, pointx_class) %>% tally() %>% ungroup()
 clustered_pois$geom <- NULL
 clustered_pois <- clustered_pois  %>% mutate(prop = n/sum(n))
 
