@@ -14,7 +14,7 @@ regions <- regions.todo
 ####################
 
 #read GM network
-osm <- st_read(file.path("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
+osm <- readRDS(file.path("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
 
 #read all pois
 poi_all <- st_read(file.path("01_DataInput/poi/Download_poi_UK_1803987/poi_4138552/poi_4138552.gpkg")) #add this from V-drive as this is not a public dataset
