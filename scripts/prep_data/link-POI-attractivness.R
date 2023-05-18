@@ -49,7 +49,7 @@ poi_coors <- gm_poi_highstreets %>% st_coordinates()
 #from visual estimate for 'eps' based on var kNN distance curve 'minPts/eps'-- 5/500; 50/500; 10/1100; 15/1000; 20/1000; 5/750; 30/1900;
 
 #get POI clusters
-gm_poi_highstreets$geog_cluster <- dbscan(poi_coors, eps = 150, minPts = 10) %>% pluck('cluster') %>% as.character()
+gm_poi_highstreets$geog_cluster <- dbscan(poi_coors, eps = 150, minPts = 10) %>% purrr::pluck('cluster') %>% as.character()
 gm_poi_highstreets$geog_cluster <- as.numeric(gm_poi_highstreets$geog_cluster)
 clustered_pois <- gm_poi_highstreets[gm_poi_highstreets$geog_cluster > 0, ]
 noise <- gm_poi_highstreets[gm_poi_highstreets$geog_cluster == 0, ]
