@@ -157,7 +157,7 @@ saveRDS(osm,paste0("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
 #get count and proportion
 clustered_pois <- join_highstr %>% group_by(osm_id, pointx_class) %>% tally() %>% ungroup()
 clustered_pois$geom <- NULL
-clustered_pois <- clustered_pois  %>% mutate(prop = n/sum(n))
+clustered_pois <- clustered_pois %>% mutate(prop = n/sum(n))
 
 count <- as.data.frame.matrix(xtabs(n ~ osm_id + pointx_class, clustered_pois), responseName = "osm_id") #convert to matrix
 
@@ -173,5 +173,5 @@ simpson$osm_id <- rownames(simpson)
 colnames(simpson)[1] <- "simpson"
 
 #join both back to osm
-osm_edgeattr <- merge(osm, shannon, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
-osm_edgeattr <- merge(osm_edgeattr, simpson, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
+osm <- merge(osm, shannon, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
+osm <- merge(osm, simpson, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
