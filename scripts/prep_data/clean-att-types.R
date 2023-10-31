@@ -90,9 +90,9 @@ network$urban <- sapply(test,length) > 0
 ######################
 #PART 3: Add TfGM mesured speed
 ######################
-tfgm_speed <- readRDS("02_DataOutput/network/gm/tfgm_speed.Rds")
+tfgm_speed <- readRDS("02_DataOutput/network/gm/tfgm_speed.Rds") #file found in WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 
 network <- left_join(network, tfgm_speed, by = "edgeID") %>% select(-spedKPH)
 colnames(network)[74] <- "spedKPH"
 
-sf::write_sf(network,"02_DataOutput/network/gm/network_v3.13.gpkg")
+sf::write_sf(network,"02_DataOutput/network/gm/network_v3.13.gpkg") 
