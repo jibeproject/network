@@ -20,7 +20,7 @@ for(a in 1:length(regions)){
 
   print (a)
 
-  if(file.exists(paste0("../bigdata/Greenness/NDVI/",regions[a],"/CR_NDVI.tif"))){ #Check for input file
+  if(file.exists(paste0("../bigdata/NDVI/",regions[a],"/CR_NDVI.tif"))){ #Check for input file
     if(file.exists(paste0("../bigdata/osm-greenness/",regions[a],"/osm_greenness.Rds"))){ #check for existing copy of output
       message(paste0("Skipping Greenness modelling for ", regions[a]," as already done"))
 
@@ -35,7 +35,7 @@ for(a in 1:length(regions)){
 
       osm <- readRDS(paste0("../bigdata/osm-slops-DEM/",regions[a],"/osm_slope.Rds"))
 
-      NDVI <- raster (paste0("../bigdata/Greenness/NDVI/",regions[a],"/CR_NDVI.tif"))
+      NDVI <- raster (paste0("../bigdata/NDVI/",regions[a],"/CR_NDVI.tif"))
 
       #make the less then 0.1 NDVI values zero to remove water, building and bare land pixels
       NDVI[NDVI < 0.1] <- 0
@@ -64,7 +64,7 @@ for(a in 1:length(regions)){
       #NDVIzonal <- terra::extract (NDVI, osmBuffer, fun=mean, na.rm=TRUE)
 
       NDVIzonal_df <- NDVIzonal_sf %>% dplyr::select (edgeID, NDVImean) %>% st_drop_geometry() %>% as.data.frame()
-      
+
       rm (NDVI, NDVIzonal_df, NDVIzonal_sf, NDVIzonal)
 
       osm <- left_join(osm,NDVIzonal_df, by = 'edgeID')
@@ -115,7 +115,7 @@ for(a in 1:length(regions)){
     #             canopycoverage = (canopysum /buffer_area) * 100)
 
     osm <- left_join(osm, canopy_coverage_osm, by = 'edgeID')
-    
+
     rm(canopy, canopycentroid, canopy_join_osm, canopy_join_osm_sf, canopy_coverage_osm)
 
     #saveRDS(osm_Greenness_added, paste0("../bigdata/osm-greenness/",regions[a],"/osm_greenness.Rds"))
@@ -173,11 +173,11 @@ for(a in 1:length(regions)){
                  m = 0.5, b = 8, mode = "logit", cores = 3, progress = T)
 
     #st_write (pVGVI,"pointsVGVI300m.gpkg")
-    
+
     rm (DEM, DSM, Greenspace, pointsonedge, pointsonedge_sf)
 
     pVGVIbuffer <- st_buffer(pVGVI, dist = 0.5)
-    
+
     rm (pVGVI)
 
     joinVGVIlines <- qgis_run_algorithm(
@@ -190,17 +190,17 @@ for(a in 1:length(regions)){
     )
 
     joinVGVIlines_sf <- sf::read_sf(qgis_output(joinVGVIlines, "OUTPUT"))
-    
+
     joinVGVIlines_sf_osm <- joinVGVIlines_sf %>%
       st_drop_geometry() %>%
       dplyr::select(edgeID, VGVI_mean)
-    
+
     osm <- left_join(osm, joinVGVIlines_sf_osm, by = 'edgeID')
 
     saveRDS(osm,paste0("../bigdata/osm-greenness/",regions[a],"/osm_greenness.Rds"))
-    
+
     st_write(osm,paste0("../bigdata/osm-greenness/",regions[a],"/osm_greenness.gpkg"))
-    
+
     rm (joinVGVIlines, joinVGVIlines_sf, joinVGVIlines_sf_osm, pVGVIbuffer)
 
   }
@@ -222,5 +222,3 @@ for(a in 1:length(regions)){
 #
 #
 #st_write(osm_canopy_added,paste0("../bigdata/osm-greenness/",regions[a],"/osm_canopy_added.gpkg"))
-
-
