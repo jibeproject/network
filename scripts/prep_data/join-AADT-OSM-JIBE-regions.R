@@ -111,7 +111,7 @@ for(a in 1:length(regions)){
       jointranfermissing_imp_add <- left_join(aadtjointranfer,jointranfermissing.impu, by = 'edgeID')
 
 
-      saveRDS(jointranfermissing_imp_add,paste0("../bigdata/osm-add-aadt/",regions[a],"/osm_aadt_added.Rds.Rds"))
+      saveRDS(jointranfermissing_imp_add,paste0("../bigdata/osm-add-aadt/",regions[a],"/osm_aadt_added.Rds"))
 
       #rm(osm, aadt_network_points, aadt_network_points_sf, snapaadtOSMlines, snapaadtOSMlines_sf, snapbuffer, joinwidthtoosmlines, joinwidthtoosmlines_sf)
 
