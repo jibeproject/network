@@ -104,7 +104,7 @@ osm <- merge(osm, ind_count, by = "edgeID", all.x = TRUE)
 #PART 3.2:get green space access points
 ################
 #read green space access pnts
-green_access_pnts <- st_read(file.path("01_DataInput/poi/VectorData/open-greenspace_4206589/GB_AccessPoint.shp")) #add this from V-drive as this is not a public dataset
+green_access_pnts <- st_read(file.path("./GitHub_inputfiles_area/bigdata/postcode-pois/GB_AccessPoint.shp")) #file in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_area>bigdata>postcode-pois
 green_access_pnts <- st_zm(green_access_pnts, drop = TRUE, what = "ZM")
 #constrain to Greater Manchester region
 gm_green_access_pnts <- st_intersection(green_access_pnts, gm_bound)
