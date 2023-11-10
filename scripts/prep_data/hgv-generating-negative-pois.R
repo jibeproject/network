@@ -14,17 +14,19 @@ library(mice)
 #################
 # PART 1: get road network
 #################
+region_nm <- as.character("GreaterManchester")
+
 #read osm
-osm <- st_read(file.path("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
+osm <- readRDS(file.path("./bigdata/cycleinfra/",region_nm,"/osm_cycleinfra.Rds"))
 
 #remove old AADT imputed values
 osm <- osm %>% select(-c('aadt_mp'))
 
 #remove C2(medium heavy >3.5 tons vehicles) and C3(heavy vehicles) AADT classes from the AADT median
 osm <- osm %>% dplyr::mutate(aadt_hgv = aadt_md - c2_2019 - c3_2019)
-osm <- osm[,c(1:40, 64, 41:63)]#reorganise columns
+osm <- osm[,c(1:40, 64, 41:63)]#re-organise columns; doublecheck which columns are called, the number may not be accurate (we need to place the new AADT (col. 64) after the AADT from John Guliver's model)
 
-#add hgv-amplified stress; adjusted for HGV- volume (c2_2019 and c3_2019) by a factor of 6.019 each, based on the study findings in https://injuryprevention.bmj.com/content/27/1/71.abstract 
+#add hgv-amplified stress; adjusted for HGV- volume (c2_2019 and c3_2019) by a factor of 6.019 each, based on the study findings in https://injuryprevention.bmj.com/content/27/1/71.abstract
 osm$aadt_hgv <- osm$aadt_hgv + osm$c2_2019*6.019 + osm$c3_2019*6.019
 
 #add hgv-amplified stress to links with same OSM id (where AADT info is missing)
@@ -34,7 +36,7 @@ osm <- osm %>% group_by(osm_id) %>% tidyr::fill(aadt_hgv, .direction = "up") %>%
 # PART 2: impute missing aadt_hgv with MICE
 #################
 #clip to ONLY GM region (excluding the 10km buffer)
-gm_bounds <- st_read(file.path("01_DataInput/SpeedDataTfGM/GM_bounds_unbuf.shp"))
+gm_bounds <- st_read(file.path("./GitHub_inputfiles_network/GM_bounds_unbuf.shp")) #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 osm_gm <- st_intersection(osm, gm_bounds)
 
 #impute missing values
@@ -56,25 +58,25 @@ rm(osm_imp, gm_bounds, osm_gm) #remove unnecessary objects from work environment
 #PART 3.1: Read all needed datasets and files
 #############################
 #read GM 10km buffered boundary
-gm_bound <- st_read(file.path("01_DataInput/Cityreg_bounds/GreaterManchester/bounds.geojson"))
+gm_bound <- st_read(file.path("./GitHub_inputfiles_network/bounds.geojson")) #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 
 #read all UK pois
-poi_all <- st_read(file.path("01_DataInput/poi/Download_poi_UK_1803987/poi_4138552/poi_4138552.gpkg"))
+poi_all <- readRDS(file.path("./bigdata/postcode-pois/gm_poi.Rds")) #in GitHub bigdata folder
 
 #read negative freight CLASSIFICATION CODES
-poi_negativefreight_codes <- utils::read.csv(file = file.path("01_DataInput/poi/negative_freight.csv"), header = FALSE)
+poi_negativefreight_codes <- utils::read.csv(file = file.path("./bigdata/negative_freight.csv"), header = FALSE) #file in GitHub bigdata folder
 poi_negativefreight_codes[1,1] <- "10570794"
 colnames(poi_negativefreight_codes)[1] <- "pointx_class"
 
 #read weights
-negative_freight_wgt <- utils::read.csv(file = file.path("01_DataInput/poi/negative_freight_wgt.csv"), header = FALSE)
+negative_freight_wgt <- utils::read.csv(file = file.path("./bigdata/negative_freight_wgt.csv"), header = FALSE)  #file in GitHub bigdata folder
 negative_freight_wgt$V2[is.na(negative_freight_wgt$V2)] <- as.numeric("1")
 negative_freight_wgt[1,1] <- "10570794"
 colnames(negative_freight_wgt)[1] <- "pointx_class"
 colnames(negative_freight_wgt)[2] <- "weight"
 
 #read in OS Geomni UKBuilding polygons
-geom_build <- st_read(file.path("01_DataInput/poi/Geomni/ukbuildings_4188614/UKBuildings.shp"))
+geom_build <- st_read(file.path("./GitHub_inputfiles_area/bigdata/postcode-pois/UKBuildings.shp")) #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_area>bigdata>postcode-pois
 
 #############################
 #PART 3.2: Preform spatial operations
@@ -113,3 +115,8 @@ rm(geom_build, negative_freight_wgt, poi_negativefreight_codes, poi_all, gm_boun
 #bring negative freight score to osm network
 osm <- merge(osm, neg_hgv_count_edgeid, by = "edgeID", all.x = TRUE)
 osm <- osm[,c(1:41, 64:65, 42:63)] #rearange columns to match documentation order
+
+#save output
+dir.create(paste0("./bigdata/hgv_negative"))
+saveRDS(osm, paste0("./bigdata/hgv_negative/",region_nm,"/osm_hgv_negative.Rds"))
+rm(osm)
