@@ -42,6 +42,7 @@ mf <- sf::st_as_sf(df, coords = c("lon", "lat"), crs = projcrs) %>% sf::st_trans
 #PART 2: read osm dataset and GM boundary for clipping
 ####################
 region_nm <- as.character("GreaterManchester")
+
 #clip modal filters to GM
 gm_bound <- st_read(file.path("./GitHub_inputfiles_network/bounds.geojson"))#in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 mf_gm <- st_intersection(mf, gm_bound)
@@ -89,3 +90,8 @@ mf_edgeid <- osm_mf %>% group_by(edgeID, modalfil) %>% tally() %>% ungroup() %>%
 osm <- merge(osm, mf_edgeid, by = "edgeID", all = TRUE) #attach modal filter counts info on the edges
 osm$modalfil <- ifelse(is.na(osm$modalfil), as.character("all"), osm$modalfil)
 osm$mf_cnt <- ifelse(is.na(osm$mf_cnt), as.numeric(0), osm$mf_cnt)
+
+#save output
+dir.create(paste0("./bigdata/modalfil"))
+saveRDS(osm, paste0("../bigdata/modalfil/",region_nm,"/osm_modalfil.Rds"))
+rm(osm)
