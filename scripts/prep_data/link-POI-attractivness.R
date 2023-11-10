@@ -13,7 +13,7 @@ region_nm <- as.character("GreaterManchester") #change name to the region proces
 ####################
 
 #read GM network
-osm <- readRDS(file.path("./bigdata/network-clean/",region_nm,"/network_edges.Rds")) #file in GitHub in bigdata folder
+osm <- readRDS(file.path("./bigdata/osm-add-aadt/",region_nm,"/osm_aadt_added.Rds")) #file in GitHub in bigdata folder
 
 #read all pois
 poi_all <- st_read(file.path("./GitHub_inputfiles_network/Download_poi_UK_1803987/poi_4138552/poi_4138552.gpkg")) #file in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
