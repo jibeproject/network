@@ -80,6 +80,8 @@ for(a in 1:length(regions)){
       saveRDS(edges,paste0("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
       saveRDS(nodes,paste0("../bigdata/network-clean/",regions[a],"/network_nodes.Rds"))
 
+      sf::write_sf(nodes, file.path("./bigdata/network-clean/",regions[a],"/nodes.gpkg"))
+
       rm(osm_pseudo_sf, touching_list, graph_list, roads_group, roads_table, roads_table_order, biggest_group)
       rm (osm_connected_edges, osm_connected_nodes, source_nodes, target_nodes)
       rm (edges, nodes, osm, osm_sf, osm_sfnetwork, osm_pseudo)

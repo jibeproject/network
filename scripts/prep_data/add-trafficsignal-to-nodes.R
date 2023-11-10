@@ -10,14 +10,16 @@ qgis_show_help("native:snapgeometries")
 ####################
 #PART 1: get road network nodes, traffic signals and crossing facilities
 ###################
+region_nm <- as.character("GreaterManchester")
+
 #get network nodes
-nodes <- st_read(file.path("02_DataOutput/network/gm/nodes/superseded/network_nodes_z.gpkg"), drivers = "GPKG")
+nodes <- st_read(file.path(".network-clean/",region_nm,"/network_nodes_z.gpkg"), drivers = "GPKG") #the Z coordinate is added directly in QGIS using the DEM model
 
 #read network
-edges <- st_read(file.path("01_DataInput/Network/GreaterManchester/network_edges_v2.1.gpkg"), drivers = "GPKG")
+edges <- st_read(file.path("./bigdata/network-clean/",region_nm,"/network_v3.13.gpkg")) #found in local V-drive
 
 #read crossing points
-crossingpnts <- st_read(file.path("01_DataInput/Network/GM_cycle/BeeNetwork/SHP/CrossingPoints_point.shp"))
+crossingpnts <- st_read(file.path("./bigdata/osm-crossings-trafficsign/CrossingPoints_point.shp")) #found in GitHub in bigdata folder
 crossingpnts <- crossingpnts[crossingpnts$Status == "Existing", ] #keep only existing
 
 #read traffic signals
@@ -114,7 +116,7 @@ nodes <- merge(nodes, nodes_crossingpnts, by = "nodeID", all = TRUE)
 
 #count crossings and signals on network nodes
 nodes <- nodes %>% mutate(ped_cros = coalesce(peds_signal, peds_zebra)) %>% select(-c(peds_signal, peds_zebra))
-st_write(nodes, file.path(paste0("02_DataOutput/network/gm/nodes/network_nodes_z.gpkg")), "network_nodes_z", driver="GPKG") #write for visual inspection in QGIS
+st_write(nodes, file.path(paste0("./network_nodes_z.gpkg")), "network_nodes_z", driver="GPKG") #write for visual inspection in QGIS
 
 ####################
 #PART 2.1: join CYCLIST traffic signals an parallel zebra crossings on network nodes
@@ -141,7 +143,7 @@ nodes <- merge(nodes, nodes_trafsig, by = "nodeID", all =TRUE)
 colnames(nodes)[4] <- "trafsign"
 
 #write for visual check
-st_write(com_buf, file.path(paste0("02_DataOutput/network/gm/nodes/com_buf.gpkg")), "com_buf", driver="GPKG")
+st_write(com_buf, file.path(paste0("./com_buf.gpkg")), "com_buf", driver="GPKG")
 
 ##############
 #PARALLEL (zebra peds+cyc)
@@ -164,7 +166,7 @@ signal_nul <- trafficsignal_buf[trafficsignal_buf$Type %like% "Signal" == TRUE &
 signal_nul_buf <- st_buffer(signal_nul, 50)
 
 #read in QGIS pre-clipped network segments (using JoinAttributesByLocation 'intersects') tagged 'highway:cycleway' intersecting with Signal buffer
-osm_cycleway_cros <- st_read(file.path("01_DataInput/TrafficSignal/SHP-format/osm_cycleway_crossings.shp"))
+osm_cycleway_cros <- st_read(file.path("./GitHub_inputfiles_network/osm_cycleway_crossings.shp")) #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 
 #find network nodes on the cycleway crossing edges
 cyc_sign_cros <- st_intersection(osm_cycleway_cros[, c("edgeID", "highway")], nodes[,c("nodeID")])
@@ -187,4 +189,4 @@ levels(as.factor(nodes$ped_cros))
 levels(as.factor(nodes$cyc_cros))
 
 #write final network nodes file
-st_write(nodes, file.path(paste0("02_DataOutput/network/gm/nodes/network_nodes_z.gpkg")), "network_nodes_z", driver="GPKG") #write for visual inspection in QGIS
+st_write(nodes, file.path(paste0("./bigdata/network-clean/",region_nm,"/network_nodes_z.gpkg")), "network_nodes_z", driver="GPKG") #write for visual inspection in QGIS
