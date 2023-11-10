@@ -14,7 +14,7 @@ install.packages("qgisprocess", dependencies = TRUE)
 #PART 1: get modal filters from CycleStreets API
 ####################
 #Create CycleStreets API call-- key must be personalized and bbox must be set-- call restriction 2000 features (enough for one city region unless Greater London)
-api_call <- "https://api.cyclestreets.net/v2/advocacydata.modalfilters?bbox=-1.3278,53.804,-3.1008,53.2022&key=0275873928ca6633"
+api_call <- "https://api.cyclestreets.net/v2/advocacydata.modalfilters?bbox=-1.3278,53.804,-3.1008,53.2022&key=XXXX873928caXXXX"
 httrreq <- httr::GET(api_call)
 txt <- httr::content(httrreq, as = "text", encoding = "UTF-8")
 obj <- jsonlite::fromJSON(txt)
