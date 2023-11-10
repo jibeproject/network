@@ -2,8 +2,8 @@
 library(tidyverse)
 library(dplyr)
 
-setwd("D:/JIBE")
-network <- sf::read_sf("02_DataOutput/network/gm/network_v3.12.gpkg")
+region_nm <- as.character("GreaterManchester")
+network <- readRDS(file.path("./bigdata/speedTfGM/",region-nm,"/osm_speed.Rds"))
 
 ######################
 #PART 1: CONVERT DATA TYPES ###
@@ -80,19 +80,19 @@ network$capacity = network$laneCapacity * network$permlanes
 
 # OAs can be found at: https://statistics.ukdataservice.ac.uk/dataset/2011-census-geography-boundaries-output-areas-and-small-areas
 # RUC can be found at: https://geoportal.statistics.gov.uk/datasets/rural-urban-classification-2011-of-output-areas-in-england-and-wales-1/about
-OAs <- sf::read_sf("01_DataInput/Cityreg_bounds/GreaterManchester/infuse_oa_lyr_2011_clipped/infuse_oa_lyr_2011_clipped.shp")
-RUC <- readr::read_csv("01_DataInput/Cityreg_bounds/GreaterManchester/RUC11_OA11_EW/RUC11_OA11_EW.csv")
+OAs <- sf::read_sf("./infuse_oa_lyr_2011_clipped.shp")
+RUC <- readr::read_csv("./RUC11_OA11_EW/RUC11_OA11_EW.csv")
 
 UrbanOAs <- OAs %>% left_join(RUC, by = c("geo_code" = "OA11CD")) %>% filter(startsWith(RUC11,"Urban"))
 test <- sf::st_intersects(network,UrbanOAs)
 network$urban <- sapply(test,length) > 0
 
 ######################
-#PART 3: Add TfGM mesured speed
+#PART 3: Add TfGM measured speed
 ######################
 tfgm_speed <- readRDS("02_DataOutput/network/gm/tfgm_speed.Rds") #file found in WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 
 network <- left_join(network, tfgm_speed, by = "edgeID") %>% select(-spedKPH)
 colnames(network)[74] <- "spedKPH"
 
-sf::write_sf(network,"02_DataOutput/network/gm/network_v3.13.gpkg") 
+sf::write_sf(network,"02_DataOutput/network/gm/network_v3.13.gpkg")

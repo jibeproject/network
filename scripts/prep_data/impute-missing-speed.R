@@ -9,9 +9,12 @@ library(mice)
 #################
 # PART 1: imputing missing data with MICE
 #################
+region_nm <- as.character("GreaterManchester")
+
 #clip to ONLY GM region (excluding the 10km buffer)
-osm <- st_read(file.path("02_DataOutput/network/gm/network_v2.10.shp"), drivers = "ESRI Shapefile")
-gm_bounds <- st_read(file.path("01_DataInput/SpeedDataTfGM/GM_bounds_unbuf.shp"))
+osm <- readRDS(file.path("./bigdata/crime/",region_nm,"/osm_crime.Rds"))
+
+gm_bounds <- st_read(file.path("./GitHub_inputfiles_network/GM_bounds_unbuf.shp")) #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 osm_gm <- st_intersection(osm, gm_bounds)
 
 #test for missingness
@@ -42,3 +45,5 @@ colnames(imputed)[2] <- 'aadt_mp'
 #################
 osm <- osm %>% select(-speedKPH) #remove speedKPH with missing values
 osm <- merge(osm, imputed[,c("edgeID", "speedKPH")], by = "edgeID", all = TRUE) #attach speedKPH after imputation back on the edges
+
+saveRDS(osm, paste0("./bigdata/speedTfGM/",region-nm,"/osm_speed.Rds"))
