@@ -24,7 +24,7 @@ osm <- osm %>% select(-c('aadt_mp'))
 osm <- osm %>% dplyr::mutate(aadt_hgv = aadt_md - c2_2019 - c3_2019)
 osm <- osm[,c(1:40, 64, 41:63)]#reorganise columns
 
-#add hgv-amplified stress (ask Labib for paper reference)
+#add hgv-amplified stress; adjusted for HGV- volume (c2_2019 and c3_2019) by a factor of 6.019 each, based on the study findings in https://injuryprevention.bmj.com/content/27/1/71.abstract 
 osm$aadt_hgv <- osm$aadt_hgv + osm$c2_2019*6.019 + osm$c3_2019*6.019
 
 #add hgv-amplified stress to links with same OSM id (where AADT info is missing)
