@@ -173,6 +173,7 @@ osm <- osm %>%
       dplyr::mutate(cycleosm = ifelse(stringr::str_detect(highway, "cycleway") == TRUE & stringr::str_detect(roadtyp, "Segregated Cycleway") == TRUE, as.numeric(2), cycleosm)) %>%
       dplyr::mutate(cycleosm = ifelse(stringr::str_detect(highway, "cycleway") == TRUE & stringr::str_detect(roadtyp, "Cycleway") == TRUE, as.numeric(2), cycleosm))
 
-#save for next stages
+#save output
+dir.create(paste0("./bigdata/modalfil"))
 saveRDS(osm, paste0("./bigdata/cycleinfra/",region_nm,"/osm_cycleinfra.Rds"))
 rm(osm)
