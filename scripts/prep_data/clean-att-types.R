@@ -95,4 +95,4 @@ tfgm_speed <- readRDS("02_DataOutput/network/gm/tfgm_speed.Rds") #file found in 
 network <- left_join(network, tfgm_speed, by = "edgeID") %>% select(-spedKPH)
 colnames(network)[74] <- "spedKPH"
 
-sf::write_sf(network,"02_DataOutput/network/gm/network_v3.13.gpkg")
+sf::write_sf(network,file.path("./bigdata/network-clean/",region_nm,"/network_v3.13.gpkg"))
