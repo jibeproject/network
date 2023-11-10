@@ -93,5 +93,5 @@ osm$mf_cnt <- ifelse(is.na(osm$mf_cnt), as.numeric(0), osm$mf_cnt)
 
 #save output
 dir.create(paste0("./bigdata/modalfil"))
-saveRDS(osm, paste0("../bigdata/modalfil/",region_nm,"/osm_modalfil.Rds"))
+saveRDS(osm, paste0("./bigdata/modalfil/",region_nm,"/osm_modalfil.Rds"))
 rm(osm)

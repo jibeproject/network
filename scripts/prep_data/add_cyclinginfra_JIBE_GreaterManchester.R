@@ -42,10 +42,11 @@
 #0 (dismount) = Cycling link but have to walk (Tfgm 9)      9
 
 #read-in networks data
-#osm <- st_read(file.path("01_DataInput/Network/GreaterManchester/network-addedinfo.geojson"))
+region_nm <- as.character("GreaterManchester")
 
-osm <- readRDS(paste0("../bigdata/network-clean/","GreaterManchester","/network_edges.Rds"))
-cycle <-  st_read(file.path("../network/01_DataInput/Network/GM_cycle/2018/SHP-format/2018/Cycle_Routes_polyline.shp"))
+osm <- readRDS(file.path("./bigdata/modalfil/",region_nm,"/osm_modalfil.Rds"))
+
+cycle <-  st_read(file.path("./GitHub_inputfiles_network/2018/Cycle_Routes_polyline.shp")) #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 
 #keep only existing infra -3; from 3306 total of 75 removed - 1 (idea/concept) - 2 (potential route) --3231 final
 #cycle <- cycle[cycle$RouteStatu == 3, ] these tags are outdated (most routes exist)
@@ -144,12 +145,12 @@ osmcycle_sf <- osmcycle_sf %>%
       dplyr::mutate(cycleosm = ifelse(!is.na(cycleinfra), cycleinfra, cycleosm))%>%
       select(-c(cycleinfra, RouteType_majority))
 
-
-#save for next stages
-saveRDS(osmcycle_sf, paste0("../bigdata/network-addedinfo/","GreaterManchester","/network_added_edges.Rds"))
+#save output
+dir.create(paste0("./bigdata/modalfil"))
+saveRDS(osmcycle_sf, paste0("./bigdata/cycleinfra/",region_nm,"/osm_cycleinfra.Rds"))
 
 #write for GIS viewing
-st_write(osmcycle_sf, paste0("../bigdata/network-addedinfo/","GreaterManchester","/", "network_added_edges.geojson"), overwrite = TRUE)
+st_write(osmcycle_sf, paste0("./bigdata/cycleinfra/",region_nm,"/osm_cycleinfra.geojson"), overwrite = TRUE)
 
 #remove unnecessary files
 rm (osm, cycle, cycle_points, snap, snap_sf, snapbuffer, joininfo, osmcycle_sf)
@@ -173,5 +174,5 @@ osm <- osm %>%
       dplyr::mutate(cycleosm = ifelse(stringr::str_detect(highway, "cycleway") == TRUE & stringr::str_detect(roadtyp, "Cycleway") == TRUE, as.numeric(2), cycleosm))
 
 #save for next stages
-saveRDS(osm, paste0("../bigdata/network-addedinfo/",region_nm,"/network_added_edges.Rds"))
+saveRDS(osm, paste0("../bigdata/cycleinfra/",region_nm,"/osm_cycleinfra.Rds"))
 rm(osm)
