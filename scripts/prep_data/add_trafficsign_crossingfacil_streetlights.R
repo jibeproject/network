@@ -6,17 +6,18 @@ if (!require("dplyr")) install.packages("dplyr")
 if (!require("qgisprocess")) install.packages("qgisprocess")
 install.packages("qgisprocess", dependencies = TRUE)
 
+region_nm <- as.character("GreaterManchester")
 ####################
 #PART 1: get road network, traffic signals, crossing facilities and street lights
 ####################
 #read osm network
-osm <- st_read(file.path("01_DataInput/Network/GreaterManchester/network_edges_v2.1.gpkg"), drivers = "GPKG") #add this from V-drive as this is not a public dataset
+osm <- st_read(file.path("./bigdata/osm-add-aadt/",region-nm,"/osm_aadt_added.Rds"), drivers = "GPKG") #add this from V-drive
 
 #read traffic signals
-trafficsignal <- st_read(file.path("../bigdata/osm-crossings-trafficsign/trafficsignal.Rds"))
+trafficsignal <- st_read(file.path("./bigdata/osm-crossings-trafficsign/trafficsignal.Rds")) #in GitHub big data folder
 
 #read crossing points
-crossingpnts <- st_read(file.path("../bigdata/osm-crossings-trafficsign/crossingpnts.Rds"))
+crossingpnts <- st_read(file.path("../bigdata/osm-crossings-trafficsign/crossingpnts.Rds")) #in GitHub big data folder
 crossingpnts <- crossingpnts[crossingpnts$Status == "Existing", ] #keep only existing
 
 #attributes spatial join
@@ -26,7 +27,7 @@ crossingpnts_nosign <- crossingpnts[!crossingpnts$geometry %in% crossingpnts_nos
 crossingpnts_nosign_buf <- st_buffer(crossingpnts_nosign, 20)
 
 #read street lights
-streetlgh <- st_read(file.path("01_DataInput/GM_streetlights/GM_streetlights.csv"), options=c("X_POSSIBLE_NAMES=easting", "Y_POSSIBLE_NAMES=northing"))  #add this from V-drive as this is not a public dataset
+streetlgh <- st_read(file.path("./GitHub_inputfiles_network/GM_streetlights.csv"), options=c("X_POSSIBLE_NAMES=easting", "Y_POSSIBLE_NAMES=northing"))  #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 st_crs(streetlgh) <- 27700
 
 ####################
@@ -146,7 +147,7 @@ osm$streetlgh <- ifelse(is.na(osm$streetlgh), as.numeric(0), osm$streetlgh) #rep
 #PART 6: join traffic calming on the edge
 ####################
 
-traffic_calm <- st_read(file.path("01_DataInput/TrafficCalming/20210823_OSDataForCambridge/TrafficCalmingLine_polyline.shp")) #add this from V-drive as this is not a public dataset
+traffic_calm <- st_read(file.path("./GitHub_inputfiles_network/20210823_OSDataForCambridge/TrafficCalmingLine_polyline.shp")) #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 
 sample <- qgis_run_algorithm(
   "native:pointsalonglines",
@@ -178,6 +179,7 @@ osm <- merge(osm, osm_traffic_calm, by = "edgeID", all = TRUE) #attach traffic_c
 osm$structure <- ifelse(is.na(osm$structure), as.character("no"), osm$structure)
 colnames(osm)[colnames(osm) == "structure"] <- "traf_calm_ftr"
 
-#save for next stages
-saveRDS(osm, paste0("../bigdata/network-clean/",region_nm,"/crossings_streetlgts_trafcalm.Rds"))
+#save output
+dir.create(paste0("./bigdata/crossings"))
+saveRDS(osm, paste0("../bigdata/crossings/",region_nm,"/osm_crossings_streetlgts_trafcalm.Rds"))
 rm(osm)
