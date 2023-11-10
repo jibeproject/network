@@ -23,7 +23,7 @@ crossingpnts <- st_read(file.path("./bigdata/osm-crossings-trafficsign/CrossingP
 crossingpnts <- crossingpnts[crossingpnts$Status == "Existing", ] #keep only existing
 
 #read traffic signals
-trafficsignal <- st_read(file.path("01_DataInput/TrafficSignal/SHP-format/TrafficSignals.shp"))
+trafficsignal <- readRDS(file.path("./bigdata/osm-crossings-trafficsign/trafficsignal.Rds")) #in GitHub big data folder
 
 #buffer existing TrafficSignals locations to remove crossing points in close proximity-- avoid double counting
 trafficsignal_buf <- st_buffer(trafficsignal, 20)
