@@ -26,13 +26,13 @@ subset(ogrDrivers(), grepl("GDB", name))
 fc_list <- ogrListLayers(fgdb)
 masmap <- st_read(dsn=fgdb,layer="RoadLink_N")
 #get GM bounds
-gm_bound <- st_read(file.path("01_DataInput/Cityreg_bounds/GreaterManchester/bounds.geojson"))
+gm_bound <- st_read(file.path("GitHub_inputfiles_network/bounds.geojson")) #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 #clip to GM bounds
 gm_masmap <- st_intersection(masmap, gm_bound)
 
 #read TfGM speed data
-check <- readxl::read_excel(file.path("01_DataInput/SpeedDataTfGM/TfGM 85th%ile Journey Times.xlsx"), sheet = "Sheet2")  #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
-speed_85per <- readxl::read_excel(file.path("01_DataInput/SpeedDataTfGM/TfGM 85th%ile Journey Times.xlsx"), sheet = "Sheet2")
+check <- readxl::read_excel(file.path("GitHub_inputfiles_network/TfGM 85th%ile Journey Times.xlsx"), sheet = "Sheet2")  #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
+speed_85per <- readxl::read_excel(file.path("GitHub_inputfiles_network/TfGM 85th%ile Journey Times.xlsx"), sheet = "Sheet2")
 speed_85per$speedMPH <- speed_85per$speedMPH * 1.609344 #convert m/h to km/h
 colnames(speed_85per)[4] <- "speedKPH"
 speed_85per <- speed_85per %>% mutate(Link_id = gsub("[a-zA-Z ]", "", Link_id))
@@ -96,4 +96,4 @@ osm_imp[,2:4] <- missForest(osm_imp, parallelize = 'forests')$ximp[,2:4]
 osm <- osm %>% select(-speedKPH) #remove speedKPH with missing values
 osm <- merge(osm, osm_imp[,c("edgeID", "speedKPH")], by = "edgeID", all = TRUE) #attach speedKPH after imputation back on the edges
 
-saveRDS(osm, paste0("../bigdata/network-clean/network_edges.Rds"))
+saveRDS(osm, paste0("./bigdata/network-clean/GreaterManchester/network_edges.Rds"))
