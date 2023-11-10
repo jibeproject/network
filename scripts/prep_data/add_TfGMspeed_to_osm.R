@@ -30,7 +30,7 @@ gm_bound <- st_read(file.path("GitHub_inputfiles_network/bounds.geojson")) #in t
 #clip to GM bounds
 gm_masmap <- st_intersection(masmap, gm_bound) #clip to GM
 
-#read TfGM speed data  
+#read TfGM speed data
 speed_85per <- readxl::read_excel(file.path("GitHub_inputfiles_network/TfGM 85th%ile Journey Times.xlsx"), sheet = "Sheet2") #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 speed_85per$speedMPH <- speed_85per$speedMPH * 1.609344 #convert m/h to km/h
 colnames(speed_85per)[4] <- "speedKPH"
@@ -95,4 +95,6 @@ osm_imp[,2:4] <- missForest(osm_imp, parallelize = 'forests')$ximp[,2:4]
 osm <- osm %>% select(-speedKPH) #remove speedKPH with missing values
 osm <- merge(osm, osm_imp[,c("edgeID", "speedKPH")], by = "edgeID", all = TRUE) #attach speedKPH after imputation back on the edges
 
-saveRDS(osm, paste0("./bigdata/network-clean/GreaterManchester/network_edges.Rds"))
+#save output
+dir.create(paste0("./bigdata/speedTfGM"))
+saveRDS(osm, paste0("./bigdata/speedTfGM/osm_speed.Rds"))
