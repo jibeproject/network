@@ -10,21 +10,21 @@ qgis_show_help("native:snapgeometries")
 ####################
 #PART 1: get road network and crime data
 ####################
-regions <- regions.todo
+region_nm <- as.character("GreaterManchester")
 
 #read network
-osm <- st_read(file.path("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
+osm <- readRDS(file.path("./bigdata/hgv_negative/",region_nm,"/osm_hgv_negative.Rds"))
 
-crime1 <- st_read(file.path("../bigdata/crimereports/2019-01-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
-crime2 <- st_read(file.path("../bigdata/crimereports/2019-02-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
-crime3 <- st_read(file.path("../bigdata/crimereports/2019-03-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
-crime4 <- st_read(file.path("../bigdata/crimereports/2019-04-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
-crime5 <- st_read(file.path("../bigdata/crimereports/2019-05-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
+crime1 <- st_read(file.path("./bigdata/crimereports/2019-01-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700) # ALL files found on GitHub in the bigdata folder
+crime2 <- st_read(file.path("./bigdata/crimereports/2019-02-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
+crime3 <- st_read(file.path("./bigdata/crimereports/2019-03-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
+crime4 <- st_read(file.path("./bigdata/crimereports/2019-04-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
+crime5 <- st_read(file.path("./bigdata/crimereports/2019-05-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
 crime6 <- st_read(file.path("../bigdata/crimereports/2019-06-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
 
-crime7 <- st_read(file.path("../bigdata/crimereports/2018-10-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
-crime8 <- st_read(file.path("../bigdata/crimereports/2018-11-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
-crime9 <- st_read(file.path("../bigdata/crimereports/2018-12-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
+crime7 <- st_read(file.path("./bigdata/crimereports/2018-10-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
+crime8 <- st_read(file.path("./bigdata/crimereports/2018-11-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
+crime9 <- st_read(file.path("./bigdata/crimereports/2018-12-greater-manchester-street.csv"), options=c("X_POSSIBLE_NAMES=Longitude","Y_POSSIBLE_NAMES=Latitude")) %>% st_set_crs(4326) %>% st_transform(27700)
 
 crime_all <- rbind(crime1[, c("Month", "LSOA.code")], crime2[, c("Month", "LSOA.code")], crime3[, c("Month", "LSOA.code")],
                    crime4[, c("Month", "LSOA.code")], crime5[, c("Month", "LSOA.code")], crime6[, c("Month", "LSOA.code")],
@@ -47,6 +47,7 @@ osm <- merge(osm, osm_crime, by = "edgeID", all = TRUE) #attach crime counts inf
 
 osm$crim_cnt <- ifelse(is.na(osm$crim_cnt), as.numeric(0), osm$crim_cnt)
 
-#save for next stages
-saveRDS(osm, paste0("../bigdata/network-clean/",region_nm,"/network_edges.Rds"))
+#save output
+dir.create(paste0("./bigdata/crime"))
+saveRDS(osm, paste0("./bigdata/crime/",region_nm,"/osm_crime.Rds"))
 rm(osm)
