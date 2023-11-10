@@ -14,12 +14,13 @@ if (!require("doParallel")) install.packages("doParallel")
 help <- qgis_algorithms()
 qgis_show_help("qgis:joinbylocationsummary")
 library(missForest)
+
+setwd("")
 #################
 # PART 1: read MasterMap road network and join with TfGM speed data
 #################
 # read input file geodatabase
-fgdb <- "D:01_DataInput/SpeedDataTfGM/MasterMap Highways Network_4303687/Highways_Network_March19.gdb"
-
+fgdb <- "GitHub_inputfiles_network/Highways_Network_March19.gdb" #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 # List all feature classes in a file geodatabase
 subset(ogrDrivers(), grepl("GDB", name))
 fc_list <- ogrListLayers(fgdb)
