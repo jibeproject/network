@@ -6,27 +6,26 @@ if (!require("dbscan")) install.packages("dbscan")
 if (!require("vegan")) install.packages("vegan")
 if (!require("nngeo")) install.packages("nngeo")
 
-region_nm <- as.character("GreaterManchester")
-regions <- regions.todo
+region_nm <- as.character("GreaterManchester") #change name to the region processing
 
 ####################
 #PART 1: get road network and POIs (clip to GM)
 ####################
 
 #read GM network
-osm <- readRDS(file.path("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
+osm <- readRDS(file.path("./bigdata/network-clean/",region_nm,"/network_edges.Rds")) #file in GitHub in bigdata folder
 
 #read all pois
-poi_all <- st_read(file.path("01_DataInput/poi/Download_poi_UK_1803987/poi_4138552/poi_4138552.gpkg")) #add this from V-drive as this is not a public dataset
+poi_all <- st_read(file.path("./GitHub_inputfiles_network/Download_poi_UK_1803987/poi_4138552/poi_4138552.gpkg")) #file in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 #constrain to Greater Manchester region
-gm_bound <- st_read(file.path("../bigdata/boundaries/cityregions/",region_nm,"/bounds.geojson"))
+gm_bound <- st_read(file.path("./GitHub_inputfiles_network/bounds.geojson")) #file in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 gm_poi <- st_intersection(poi_all, gm_bound)
 
 ####################
 #PART 2: find POI clusters to filter out remote POI locations (run only for 'High Streets')
 ####################
 #read high street codes
-poi_highstreet_codes <- utils::read.csv(file = file.path("../bigdata/highstreet_codes.csv"), header = FALSE)
+poi_highstreet_codes <- utils::read.csv(file = file.path("./bigdata/highstreet_codes.csv"), header = FALSE) #file in GitHub
 poi_highstreet_codes[1,1] <- c("10590732")
 colnames(poi_highstreet_codes)[1] <- "pointx_class"
 
@@ -75,7 +74,7 @@ osm <- osm %>% mutate(highstr = ifelse(!is.na(osm$n), "yes", "no")) %>% select(-
 #PART 3.1:get individual poi weighted
 ################
 #read individual codes
-poi_individual_codes <- utils::read.csv(file = file.path("../bigdata/individual_codes.csv"), header = FALSE)
+poi_individual_codes <- utils::read.csv(file = file.path("./bigdata/individual_codes.csv"), header = FALSE) #file on GitHub in bigdata folder
 poi_individual_codes[1,1] <- c("06340453")
 colnames(poi_individual_codes)[1] <- "pointx_class"
 
@@ -83,7 +82,7 @@ colnames(poi_individual_codes)[1] <- "pointx_class"
 gm_poi_individual <- gm_poi[gm_poi$pointx_class %in% poi_individual_codes$pointx_class, ]
 
 #read individual (positive) codes weighted
-individual_wgt <- utils::read.csv(file = file.path("../bigdata/individual_wgt.csv"), header = FALSE)
+individual_wgt <- utils::read.csv(file = file.path("./bigdata/individual_wgt.csv"), header = FALSE) #file on GitHub in bigdata folder
 individual_wgt$V2[is.na(individual_wgt$V2)] <- as.numeric("1")
 individual_wgt[1,1] <- "06340453"
 colnames(individual_wgt)[1] <- "pointx_class"
@@ -124,7 +123,7 @@ osm <- merge(osm, green_count, by = "edgeID", all.x = TRUE)
 #PART 3.3:get negative codes weighted
 ################
 #read negative codes
-poi_negative_codes <- utils::read.csv(file = file.path("01_DataInput/poi/negative_codes.csv"), header = FALSE)
+poi_negative_codes <- utils::read.csv(file = file.path("./bigdata/negative_codes.csv"), header = FALSE) #file on GitHub in bigdata folder
 poi_negative_codes[1,1] <- c("06340462")
 colnames(poi_negative_codes)[1] <- "pointx_class"
 
@@ -132,7 +131,7 @@ colnames(poi_negative_codes)[1] <- "pointx_class"
 gm_poi_negative <- gm_poi[gm_poi$pointx_class %in% poi_negative_codes$pointx_class, ]
 
 #read negative codes weighted
-negative_wgt <- utils::read.csv(file = file.path("../bigdata/negative_wgt.csv"), header = FALSE)
+negative_wgt <- utils::read.csv(file = file.path("./bigdata/negative_wgt.csv"), header = FALSE) #file on GitHub in bigdata folder
 negative_wgt$V2[is.na(negative_wgt$V2)] <- as.numeric("1")
 negative_wgt[1,1] <- "06340462"
 colnames(negative_wgt)[1] <- "pointx_class"
@@ -176,4 +175,4 @@ osm <- merge(osm, shannon, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
 osm <- merge(osm, simpson, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
 
 #save output
-saveRDS(osm, paste0("../bigdata/network-clean/GreaterManchester/network_edges.Rds"))
+saveRDS(osm, paste0("./bigdata/network-clean/",region_nm,"/network_edges.Rds"))
