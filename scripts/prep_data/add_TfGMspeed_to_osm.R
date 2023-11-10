@@ -16,6 +16,7 @@ qgis_show_help("qgis:joinbylocationsummary")
 library(missForest)
 
 setwd("")
+region-nm <- as.character(GreaterManchester")
 #################
 # PART 1: read MasterMap road network and join with TfGM speed data
 #################
@@ -97,4 +98,4 @@ osm <- merge(osm, osm_imp[,c("edgeID", "speedKPH")], by = "edgeID", all = TRUE) 
 
 #save output
 dir.create(paste0("./bigdata/speedTfGM"))
-saveRDS(osm, paste0("./bigdata/speedTfGM/osm_speed.Rds"))
+saveRDS(osm, paste0("./bigdata/speedTfGM/",region-nm,"/osm_speed.Rds"))
