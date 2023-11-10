@@ -150,9 +150,8 @@ neg_count <- aggregate(. ~ edgeID, data=neg_count[,c("edgeID", "negpoi_score")],
 #asign new count-based attribute to osm network
 osm <- merge(osm, neg_count, by = "edgeID", all.x = TRUE)
 
-saveRDS(osm,paste0("../bigdata/network-clean/",regions[a],"/network_edges.Rds"))
 ####################
-#PART 4: get POI count and diversity (SKIP FOR NOW)
+#PART 4: get POI count and diversity
 ####################
 #get count and proportion
 clustered_pois <- join_highstr %>% group_by(osm_id, pointx_class) %>% tally() %>% ungroup()
@@ -175,3 +174,6 @@ colnames(simpson)[1] <- "simpson"
 #join both back to osm
 osm <- merge(osm, shannon, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
 osm <- merge(osm, simpson, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
+
+#save output
+saveRDS(osm, paste0("../bigdata/network-clean/GreaterManchester/network_edges.Rds"))
