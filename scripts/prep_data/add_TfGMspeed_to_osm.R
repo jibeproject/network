@@ -31,7 +31,7 @@ gm_bound <- st_read(file.path("01_DataInput/Cityreg_bounds/GreaterManchester/bou
 gm_masmap <- st_intersection(masmap, gm_bound)
 
 #read TfGM speed data
-check <- readxl::read_excel(file.path("01_DataInput/SpeedDataTfGM/TfGM 85th%ile Journey Times.xlsx"), sheet = "Sheet2")
+check <- readxl::read_excel(file.path("01_DataInput/SpeedDataTfGM/TfGM 85th%ile Journey Times.xlsx"), sheet = "Sheet2")  #in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 speed_85per <- readxl::read_excel(file.path("01_DataInput/SpeedDataTfGM/TfGM 85th%ile Journey Times.xlsx"), sheet = "Sheet2")
 speed_85per$speedMPH <- speed_85per$speedMPH * 1.609344 #convert m/h to km/h
 colnames(speed_85per)[4] <- "speedKPH"
@@ -48,7 +48,7 @@ gm_masmap <- merge(gm_masmap, speed_85per[,c("identifier", "speedKPH")], by = "i
 # PART 2: join to osm network
 #################
 #read osm
-osm <- st_read(file.path("02_DataOutput/network/gm/network_v2.3.gpkg"), drivers = "GPKG")
+osm <- st_read(file.path("./bigdata/osm-add-aadt/osm_aadt_added.Rds"), drivers = "GPKG")
 #sample points along gm_mastermap
 sample <- qgis_run_algorithm(
   "native:pointsalonglines",
@@ -96,5 +96,4 @@ osm_imp[,2:4] <- missForest(osm_imp, parallelize = 'forests')$ximp[,2:4]
 osm <- osm %>% select(-speedKPH) #remove speedKPH with missing values
 osm <- merge(osm, osm_imp[,c("edgeID", "speedKPH")], by = "edgeID", all = TRUE) #attach speedKPH after imputation back on the edges
 
-saveRDS(osm, paste0("../bigdata/network-clean/",region_nm,"/network_edges.Rds"))
-rm(osm)
+saveRDS(osm, paste0("../bigdata/network-clean/network_edges.Rds"))
