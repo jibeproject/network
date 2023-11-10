@@ -11,7 +11,7 @@ install.packages("qgisprocess", dependencies = TRUE)
 #"https://api.cyclestreets.net/v2/advocacydata.modalfilters?bbox=-1.3278,53.804,-3.1008,53.2022&key=0275873928ca6633" big boundary
 
 ####################
-#PART 1: get modal filters from CycleStreets API 
+#PART 1: get modal filters from CycleStreets API
 ####################
 #Create CycleStreets API call-- key must be personalized and bbox must be set-- call restriction 2000 features (enough for one city region unless Greater London)
 api_call <- "https://api.cyclestreets.net/v2/advocacydata.modalfilters?bbox=-1.3278,53.804,-3.1008,53.2022&key=0275873928ca6633"
@@ -41,11 +41,12 @@ mf <- sf::st_as_sf(df, coords = c("lon", "lat"), crs = projcrs) %>% sf::st_trans
 ####################
 #PART 2: read osm dataset and GM boundary for clipping
 ####################
+region_nm <- as.character("GreaterManchester")
 #clip modal filters to GM
-gm_bound <- st_read(file.path("01_DataInput/Cityreg_bounds/GreaterManchester/bounds.geojson"))
+gm_bound <- st_read(file.path("./GitHub_inputfiles_network/bounds.geojson"))#in the Teams folder WP2>Data_WP2>Processed_Data>Greater Manchester>GitHub_inputfiles_network
 mf_gm <- st_intersection(mf, gm_bound)
 #get osm network
-osm <- st_read(file.path("02_DataOutput/network/gm/network_v2.6.shp"))
+osm <- readRDS(file.path("./bigdata/speed/",region_nm,"/osm_speed.Rds"))
 
 #snap to osm network
 snap <- qgis_run_algorithm(

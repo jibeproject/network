@@ -48,7 +48,7 @@ gm_masmap <- merge(gm_masmap, speed_85per[,c("identifier", "speedKPH")], by = "i
 # PART 2: join to osm network
 #################
 #read osm
-osm <- st_read(file.path("./bigdata/poi/osm_poi.Rds"), drivers = "GPKG")
+osm <- readRDS(file.path("./bigdata/poi/osm_poi.Rds"), drivers = "GPKG")
 #sample points along gm_mastermap
 sample <- qgis_run_algorithm(
   "native:pointsalonglines",

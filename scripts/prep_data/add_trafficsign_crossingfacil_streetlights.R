@@ -11,13 +11,13 @@ region_nm <- as.character("GreaterManchester")
 #PART 1: get road network, traffic signals, crossing facilities and street lights
 ####################
 #read osm network
-osm <- st_read(file.path("./bigdata/osm-add-aadt/",region-nm,"/osm_aadt_added.Rds"), drivers = "GPKG") #add this from V-drive
+osm <- readRDS(file.path("./bigdata/osm-add-aadt/",region-nm,"/osm_aadt_added.Rds"), drivers = "GPKG") #add this from V-drive
 
 #read traffic signals
-trafficsignal <- st_read(file.path("./bigdata/osm-crossings-trafficsign/trafficsignal.Rds")) #in GitHub big data folder
+trafficsignal <- readRDS(file.path("./bigdata/osm-crossings-trafficsign/trafficsignal.Rds")) #in GitHub big data folder
 
 #read crossing points
-crossingpnts <- st_read(file.path("../bigdata/osm-crossings-trafficsign/crossingpnts.Rds")) #in GitHub big data folder
+crossingpnts <- readRDS(file.path("../bigdata/osm-crossings-trafficsign/crossingpnts.Rds")) #in GitHub big data folder
 crossingpnts <- crossingpnts[crossingpnts$Status == "Existing", ] #keep only existing
 
 #attributes spatial join
