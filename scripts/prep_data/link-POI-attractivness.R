@@ -175,4 +175,5 @@ osm <- merge(osm, shannon, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
 osm <- merge(osm, simpson, by.x = "osm_id", all.x = TRUE) %>% st_as_sf()
 
 #save output
-saveRDS(osm, paste0("./bigdata/network-clean/",region_nm,"/network_edges.Rds"))
+dir.create(paste0("./bigdata/poi"))
+saveRDS(osm, paste0("./bigdata/poi/osm_poi.Rds"))
