@@ -16,7 +16,7 @@ qgis_show_help("qgis:joinbylocationsummary")
 library(missForest)
 
 setwd("")
-region-nm <- as.character(GreaterManchester")
+region-nm <- as.character("GreaterManchester")
 #################
 # PART 1: read MasterMap road network and join with TfGM speed data
 #################
